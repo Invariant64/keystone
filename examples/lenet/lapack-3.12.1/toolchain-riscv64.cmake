@@ -1,0 +1,23 @@
+# RISC-V 64位交叉编译工具链配置
+
+# 设置目标系统
+SET(CMAKE_SYSTEM_NAME Linux)
+SET(CMAKE_SYSTEM_PROCESSOR riscv64)
+
+# 指定交叉编译器
+SET(CMAKE_C_COMPILER riscv64-linux-gnu-gcc)
+SET(CMAKE_CXX_COMPILER riscv64-linux-gnu-g++)
+SET(CMAKE_Fortran_COMPILER riscv64-linux-gnu-gfortran)
+
+# 设置编译器标志
+SET(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -march=rv64gc -mabi=lp64d")
+SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -march=rv64gc -mabi=lp64d")
+
+# 设置查找路径
+SET(CMAKE_FIND_ROOT_PATH /usr/riscv64-linux-gnu)
+
+# 设置查找规则
+SET(CMAKE_FIND_ROOT_PATH_MODE_PROGRAM NEVER)
+SET(CMAKE_FIND_ROOT_PATH_MODE_LIBRARY ONLY)
+SET(CMAKE_FIND_ROOT_PATH_MODE_INCLUDE ONLY)
+SET(CMAKE_FIND_ROOT_PATH_MODE_PACKAGE ONLY)

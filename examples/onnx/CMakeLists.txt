@@ -1,5 +1,5 @@
 set(eapp_bin onnx)
-set(eapp_src eapp/onnx.c eapp/lenet.c)
+set(eapp_src eapp/onnx.c eapp/model.c)
 set(host_bin onnx-runner)
 set(host_src host/host.cpp)
 set(package_name "onnx.ke")

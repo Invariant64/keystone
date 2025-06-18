@@ -13,6 +13,12 @@ set(TH_LIB_DIR "${TH_BUILD_DIR}")
 set(TH_INCLUDE_DIR "${TH_ROOT}")
 
 
+# 定义 LAPACK 路径
+set(LAPACK_ROOT "${CMAKE_CURRENT_SOURCE_DIR}/lapack-3.12.1")
+set(LAPACK_BUILD_DIR "${LAPACK_ROOT}/build")
+set(LAPACK_LIB_DIR "${LAPACK_BUILD_DIR}/lib")
+set(LAPACK_INCLUDE_DIR "${LAPACK_ROOT}")
+
 # 检查TH库是否存在
 if(NOT EXISTS "${TH_LIB_DIR}/libTH.a")
     message(FATAL_ERROR "TH library not found at ${TH_LIB_DIR}/libTH.a")
@@ -26,6 +32,7 @@ endif()
 include_directories(${TH_BUILD_DIR})
 include_directories(${TH_INCLUDE_DIR})
 
+
 # eapp
 
 add_executable(${eapp_bin} ${eapp_src})
@@ -36,6 +43,9 @@ target_link_libraries(${eapp_bin}
     "-static"
     "${TH_LIB_DIR}/libTH.a"
     "-lm"
+    "-fopenmp"
+    "${LAPACK_LIB_DIR}/libblas.a"
+    "${LAPACK_LIB_DIR}/liblapack.a"
 )
 
 # host

@@ -5,3 +5,7 @@ build*/
 riscv/
 riscv64/
 riscv32/
+
+*.Identifier
+compile_commands.json
+*.cache
