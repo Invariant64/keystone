@@ -47,6 +47,7 @@ class KeystoneDevice {
   virtual Error run(uintptr_t* ret);
   virtual Error resume(uintptr_t* ret);
   virtual void* map(uintptr_t addr, size_t size);
+  virtual Error attestSM(const char* dev_public_key, uintptr_t* ret);
 };
 
 class MockKeystoneDevice : public KeystoneDevice {

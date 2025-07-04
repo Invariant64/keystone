@@ -220,6 +220,26 @@ int keystone_resume_enclave(unsigned long data)
   return 0;
 }
 
+int keystone_attest_sm(unsigned long data)
+{
+  struct sbiret ret;
+  struct keystone_ioctl_attest_sm *arg = (struct keystone_ioctl_attest_sm*) data;
+
+  ret = sbi_sm_attest_sm();
+
+  // if (ret.error) {
+  //   keystone_err("keystone_attest_sm: SBI call failed with error code %ld\n", ret.error);
+  //   return -EINVAL;
+  // }
+
+  // /* Copy the report to user space */
+  // if (copy_to_user(&arg->report, &ret.value, sizeof(sm_report_t))) {
+  //   return -EFAULT;
+  // }
+
+  return 0;
+}
+
 long keystone_ioctl(struct file *filep, unsigned int cmd, unsigned long arg)
 {
   long ret;
@@ -259,6 +279,10 @@ long keystone_ioctl(struct file *filep, unsigned int cmd, unsigned long arg)
     case KEYSTONE_IOC_UTM_INIT:
       ret = utm_init_ioctl(filep, (unsigned long) data);
       break;
+    case KEYSTONE_IOC_ATTEST_SM: {
+      ret = keystone_attest_sm((unsigned long) data);
+      break;
+    }
     default:
       return -ENOSYS;
   }

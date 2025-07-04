@@ -66,6 +66,8 @@ class Enclave {
       uintptr_t alternatePhysAddr);
   Error destroy();
   Error run(uintptr_t* ret = nullptr);
+
+  Error attestSM(const char* dev_public_key, uintptr_t* ret);
 };
 
 uint64_t

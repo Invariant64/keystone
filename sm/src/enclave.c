@@ -661,6 +661,24 @@ err_unlock:
   return ret;
 }
 
+unsigned long attest_sm(uintptr_t report_ptr)
+{
+  struct sm_report_t* report = (struct sm_report_t*) report_ptr;
+
+  if (!report)
+    return SBI_ERR_SM_ENCLAVE_ILLEGAL_ARGUMENT;
+
+  /* copy device public key */
+ // sbi_memcpy(report->dev_public_key, dev_public_key, PUBLIC_KEY_SIZE);
+
+  /* copy SM report */
+  sbi_memcpy(report->hash, sm_hash, MDSIZE);
+  sbi_memcpy(report->public_key, sm_public_key, PUBLIC_KEY_SIZE);
+  sbi_memcpy(report->signature, sm_signature, SIGNATURE_SIZE);
+
+  return SBI_ERR_SM_ENCLAVE_SUCCESS;
+}
+
 unsigned long get_sealing_key(uintptr_t sealing_key, uintptr_t key_ident,
                                  size_t key_ident_size, enclave_id eid)
 {

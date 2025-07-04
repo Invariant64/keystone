@@ -143,6 +143,19 @@ KeystoneDevice::initDevice(Params params) { // TODO: why does this need params
 }
 
 Error
+KeystoneDevice::attestSM(const char* dev_public_key, uintptr_t* ret) {
+  struct keystone_ioctl_attest_sm encl;
+
+  if (ioctl(fd, KEYSTONE_IOC_ATTEST_SM, &encl)) {
+    perror("ioctl error");
+    return Error::IoctlErrorAttestSM;
+  }
+
+  // *ret = encl.value;
+  return Error::Success;
+}
+
+Error
 MockKeystoneDevice::create(uint64_t minPages) {
   eid = -1;
   return Error::Success;

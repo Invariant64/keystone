@@ -273,4 +273,9 @@ Enclave::registerOcallDispatch(OcallFunc func) {
   return Error::Success;
 }
 
+Error
+Enclave::attestSM(const char* dev_public_key, uintptr_t* ret) {
+  return pDevice->attestSM(dev_public_key, ret);
+}
+
 }  // namespace Keystone

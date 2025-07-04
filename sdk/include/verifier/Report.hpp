@@ -11,24 +11,7 @@
 #include "ed25519/ed25519.h"
 #include "verifier/json11.h"
 
-struct enclave_report_t {
-  byte hash[MDSIZE];
-  uint64_t data_len;
-  byte data[ATTEST_DATA_MAXLEN];
-  byte signature[SIGNATURE_SIZE];
-};
-
-struct sm_report_t {
-  byte hash[MDSIZE];
-  byte public_key[PUBLIC_KEY_SIZE];
-  byte signature[SIGNATURE_SIZE];
-};
-
-struct report_t {
-  struct enclave_report_t enclave;
-  struct sm_report_t sm;
-  byte dev_public_key[PUBLIC_KEY_SIZE];
-};
+#include "report_struct.h"
 
 class Report {
  private:
