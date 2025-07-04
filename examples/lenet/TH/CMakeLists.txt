@@ -90,19 +90,19 @@ IF(UNIX)
   ENDIF(HAVE_MMAP)
 ENDIF(UNIX)
 
-FIND_PACKAGE(SSE)
-IF(C_SSE2_FOUND)
-  SET(CMAKE_C_FLAGS "${C_SSE2_FLAGS} -DUSE_SSE2 ${CMAKE_C_FLAGS}")
-ENDIF(C_SSE2_FOUND)
-IF(C_SSE3_FOUND)
-  SET(CMAKE_C_FLAGS "${C_SSE3_FLAGS} -DUSE_SSE3 ${CMAKE_C_FLAGS}")
-ENDIF(C_SSE3_FOUND)
-IF(C_SSE4_1_FOUND)
-  SET(CMAKE_C_FLAGS "${C_SSE4_1_FLAGS} -DUSE_SSE4_1 ${CMAKE_C_FLAGS}")
-ENDIF(C_SSE4_1_FOUND)
-IF(C_SSE4_2_FOUND)
-  SET(CMAKE_C_FLAGS "${C_SSE4_2_FLAGS} -DUSE_SSE4_2 ${CMAKE_C_FLAGS}")
-ENDIF(C_SSE4_2_FOUND)
+# FIND_PACKAGE(SSE)
+# IF(C_SSE2_FOUND)
+#   SET(CMAKE_C_FLAGS "${C_SSE2_FLAGS} -DUSE_SSE2 ${CMAKE_C_FLAGS}")
+# ENDIF(C_SSE2_FOUND)
+# IF(C_SSE3_FOUND)
+#   SET(CMAKE_C_FLAGS "${C_SSE3_FLAGS} -DUSE_SSE3 ${CMAKE_C_FLAGS}")
+# ENDIF(C_SSE3_FOUND)
+# IF(C_SSE4_1_FOUND)
+#   SET(CMAKE_C_FLAGS "${C_SSE4_1_FLAGS} -DUSE_SSE4_1 ${CMAKE_C_FLAGS}")
+# ENDIF(C_SSE4_1_FOUND)
+# IF(C_SSE4_2_FOUND)
+#   SET(CMAKE_C_FLAGS "${C_SSE4_2_FLAGS} -DUSE_SSE4_2 ${CMAKE_C_FLAGS}")
+# ENDIF(C_SSE4_2_FOUND)
 
 SET(hdr
   THGeneral.h THAllocator.h THStorage.h THTensor.h THTensorApply.h THBlas.h
@@ -117,47 +117,47 @@ SET(src ${src} ${hdr})
 ADD_LIBRARY(TH STATIC ${src})
 TARGET_LINK_LIBRARIES(TH m)
 
-CHECK_C_SOURCE_RUNS("
-#include <stdatomic.h>
-int main()
-{
-  int a;
-  int oa;
-  atomic_store(&a, 1);
-  atomic_fetch_add(&a, 1);
-  oa = atomic_load(&a);
-  if(!atomic_compare_exchange_strong(&a, &oa, 3))
-    return -1;
-  return 0;
-}
-" HAS_C11_ATOMICS)
+# CHECK_C_SOURCE_RUNS("
+# #include <stdatomic.h>
+# int main()
+# {
+#   int a;
+#   int oa;
+#   atomic_store(&a, 1);
+#   atomic_fetch_add(&a, 1);
+#   oa = atomic_load(&a);
+#   if(!atomic_compare_exchange_strong(&a, &oa, 3))
+#     return -1;
+#   return 0;
+# }
+# " HAS_C11_ATOMICS)
 
-IF(NOT HAS_C11_ATOMICS)
-  CHECK_C_SOURCE_RUNS("
-#include <intrin.h>
-int main()
-{
-  long a;
-  _InterlockedExchange(&a, 1);
-  _InterlockedExchangeAdd(&a, 1);
-  if(_InterlockedCompareExchange(&a, 3, 2) != 2)
-    return -1;
-  return 0;
-}
-" HAS_MSC_ATOMICS)
+# IF(NOT HAS_C11_ATOMICS)
+#   CHECK_C_SOURCE_RUNS("
+# #include <intrin.h>
+# int main()
+# {
+#   long a;
+#   _InterlockedExchange(&a, 1);
+#   _InterlockedExchangeAdd(&a, 1);
+#   if(_InterlockedCompareExchange(&a, 3, 2) != 2)
+#     return -1;
+#   return 0;
+# }
+# " HAS_MSC_ATOMICS)
 
-  CHECK_C_SOURCE_RUNS("
-int main()
-{
-  int a;
-  __sync_lock_test_and_set(&a, 1);
-  __sync_fetch_and_add(&a, 1);
-  if(!__sync_bool_compare_and_swap(&a, 2, 3))
-    return -1;
-  return 0;
-}
-" HAS_GCC_ATOMICS)
-ENDIF()
+#   CHECK_C_SOURCE_RUNS("
+# int main()
+# {
+#   int a;
+#   __sync_lock_test_and_set(&a, 1);
+#   __sync_fetch_and_add(&a, 1);
+#   if(!__sync_bool_compare_and_swap(&a, 2, 3))
+#     return -1;
+#   return 0;
+# }
+# " HAS_GCC_ATOMICS)
+# ENDIF()
 
 IF(HAS_C11_ATOMICS)
   ADD_DEFINITIONS(-DUSE_C11_ATOMICS=1)
@@ -199,17 +199,17 @@ FOREACH(KEYWORD "inline" "__inline__" "__inline")
   IF(NOT DEFINED C_INLINE)
 
     SET(CMAKE_REQUIRED_FLAGS "-Dinline=${KEYWORD} ${CMAKE_C_FLAGS}")
-    CHECK_C_SOURCE_RUNS("
-       static inline int static_foo()
-       {
-         return 0;
-       }
+    # CHECK_C_SOURCE_RUNS("
+    #    static inline int static_foo()
+    #    {
+    #      return 0;
+    #    }
 
-       int main(int argc, char *argv[])
-       {
-         static_foo();
-         return 0;
-       }" C_HAS_${KEYWORD})
+    #    int main(int argc, char *argv[])
+    #    {
+    #      static_foo();
+    #      return 0;
+    #    }" C_HAS_${KEYWORD})
 
     IF(C_HAS_${KEYWORD})
       SET(C_INLINE TRUE)

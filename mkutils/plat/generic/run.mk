@@ -29,6 +29,10 @@ run:
 	$(call log,info,Starting QEMU)
 	$(BUILDROOT_BUILDDIR)/host/bin/qemu-system-riscv$(KEYSTONE_BITS) $(QEMU_FLAGS)
 
+kill:
+	$(call log,info,Killing QEMU)
+	@pkill -f qemu-system-riscv$(KEYSTONE_BITS) || true
+
 debug-connect:
 	$(call log,info,Connecting to QEMU)
 	$(BUILDROOT_BUILDDIR)/host/bin/riscv$(KEYSTONE_BITS)-buildroot-linux-gnu-gdb \
