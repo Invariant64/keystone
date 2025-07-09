@@ -143,14 +143,17 @@ KeystoneDevice::initDevice() { // TODO: why does this need params
 }
 
 Error
-KeystoneDevice::attestSM(char* hash, char* publicKey, char* signature) {
+KeystoneDevice::attestSM(unsigned char* hash, unsigned char* publicKey, unsigned char* signature) {
   struct keystone_ioctl_attest_sm req;
-  if (ioctl(fd, KEYSTONE_IOC_ATTEST_SM, (unsigned long)&req)) {
+  if (ioctl(fd, KEYSTONE_IOC_ATTEST_SM, &req)) {
     perror("ioctl error");
     return Error::IoctlErrorAttestSM;
   }
 
-  // *ret = encl.value;
+  memcpy(hash, req.hash, sizeof(req.hash));
+  memcpy(publicKey, req.public_key, sizeof(req.public_key));
+  memcpy(signature, req.signature, sizeof(req.signature));
+
   return Error::Success;
 }
 

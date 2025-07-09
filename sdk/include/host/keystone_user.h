@@ -61,9 +61,9 @@ struct keystone_ioctl_run_enclave {
 };
 
 struct keystone_ioctl_attest_sm {
-  char hash[64];
-  char public_key[32];
-  char signature[64];
+  unsigned char hash[64];
+  unsigned char public_key[32];
+  unsigned char signature[64];
 };
 
 #endif

@@ -5,6 +5,8 @@
 #include "edge/edge_call.h"
 #include "host/keystone.h"
 
+#include "verifier/report.h"
+
 using namespace Keystone;
 
 int
@@ -27,76 +29,36 @@ main(int argc, char** argv) {
     printf("Device initialized successfully!\n");
   }
 
-  system("cat /proc/self/maps");
-
-
-  char hash[64];
-  char public_key[32];
-  char signature[64];
+  unsigned char hash[64];
+  unsigned char public_key[32];
+  unsigned char signature[64];
   enclave.attestSM(hash, public_key, signature);
 
-  for (int i = 0; i < 64; i++) {
-    printf("%02x ", (unsigned char)hash[i]);
-  }
-  printf("\n");
-  for (int i = 0; i < 32; i++) {
-    printf("%02x ", (unsigned char)public_key[i]);
-  }
-  printf("\n");
-  for (int i = 0; i < 64; i++) {
-    printf("%02x ", (unsigned char)signature[i]);
-  }
-  printf("\n");
+  unsigned char message[96];
+  memcpy(message, hash, 64);
+  memcpy(message + 64, public_key, 32);
 
-  // struct sm_report_t* report = (struct sm_report_t*)malloc(sizeof(struct sm_report_t));
-  // printf("report addr: %p\n", report);
-  // memset(report, 0, sizeof(struct sm_report_t));
-  // if (report == nullptr) {
-  //   printf("Failed to allocate memory for SM report!\n");
-  //   return -1;
-  // }
+  int sm_valid = ed25519_verify(
+      (const unsigned char*)signature, (const unsigned char*)message,
+      64 + 32, dev_public_key);
   
-  // memset(buffer, 0, sizeof(buffer));
-  // for (int i = 0; i < 16; i++) {
-  //   printf("%02x ", buffer[i]);
-  // }
+  if (sm_valid) {
+    printf("\nSM Attestation succeeded, starting EAPP!\n");
+  } else {
+    printf("\nSM Attestation failed, exiting!\n");
+    return -1;
+  }
 
-  // struct sm_report_t report;
-  // for (int i = 0; i < 16; i++) {
-  //   printf("%02x ", report->public_key[i]);
-  // }
-  // printf("report addr: %p\n", report);
-  
-  // memcpy(&report, buffer, sizeof(struct keystone_ioctl_attest_sm));
-  // print_hex(&report, sizeof(struct sm_report_t));
-  // printf("Report data:\n");
-  // for (int i = 0; i < MDSIZE; i++) {
-  //     printf("%02x ", report->hash[i]);
-  //     // if ((i + 1) % 16 == 0)
-  //     //     printf("\n");
-  // }
-  // int sm_valid = ed25519_verify(
-  //     report->signature, (const unsigned char*)report,
-  //     MDSIZE + PUBLIC_KEY_SIZE, dev_public_key);
-  // printf("SM Attestation report:\n");
-  // // fflush(stdout);
-  // if (sm_valid != 0) {
-  //   // printf("SM Attestation failed!");
-  //   return -1;
-  // } else {
-  //   // printf("SM Attestation succeeded!");
-  // }
+  params.setFreeMemSize(256 * 1024);
+  params.setUntrustedSize(256 * 1024);
 
-  // params.setFreeMemSize(256 * 1024);
-  // params.setUntrustedSize(256 * 1024);
+  enclave.init(argv[1], argv[2], argv[3], params);
 
-  // enclave.init(argv[1], argv[2], argv[3], params);
+  enclave.registerOcallDispatch(incoming_call_dispatch);
+  edge_call_init_internals(
+      (uintptr_t)enclave.getSharedBuffer(), enclave.getSharedBufferSize());
 
-  // enclave.registerOcallDispatch(incoming_call_dispatch);
-  // edge_call_init_internals(
-  //     (uintptr_t)enclave.getSharedBuffer(), enclave.getSharedBufferSize());
-
-  // enclave.run();
+  enclave.run();
 
   return 0;
 }

@@ -16,6 +16,7 @@ extern "C" {
 namespace Keystone {
 
 Enclave::Enclave() {
+  pDevice = NULL;
 }
 
 Enclave::~Enclave() {
@@ -173,7 +174,9 @@ Enclave::init(
 
   // if device is not initialized, initialize it
   if (pDevice == NULL) {
-    initDevice();
+    if (initDevice() != Error::Success) {
+      return Error::DeviceInitFailure;
+    }
   }
 
   ElfFile* elfFiles[3] = {enclaveFile, runtimeFile, loaderFile};
@@ -285,7 +288,7 @@ Enclave::registerOcallDispatch(OcallFunc func) {
 }
 
 Error
-Enclave::attestSM(char* hash, char* publicKey, char* signature) {
+Enclave::attestSM(unsigned char* hash, unsigned char* publicKey, unsigned char* signature) {
   return pDevice->attestSM(hash, publicKey, signature);
 }
 

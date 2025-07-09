@@ -67,7 +67,7 @@ class Enclave {
   Error run(uintptr_t* ret = nullptr);
   
   Error initDevice();
-  Error attestSM(char* hash, char* publicKey, char* signature);
+  Error attestSM(unsigned char* hash, unsigned char* publicKey, unsigned char* signature);
 };
 
 uint64_t

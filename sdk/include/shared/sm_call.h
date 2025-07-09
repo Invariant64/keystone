@@ -68,9 +68,9 @@ struct keystone_sbi_create_t {
 };
 
 struct keystone_sbi_attest_sm_t {
-  char hash[64];          // SHA-256 hash of the SM
-  char public_key[32];   // Public key of the SM
-  char signature[64];    // Signature of the SM
+  unsigned char hash[64];
+  unsigned char public_key[32];
+  unsigned char signature[64];
 };
 
 #endif  // __SM_CALL_H__
