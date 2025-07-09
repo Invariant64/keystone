@@ -220,22 +220,53 @@ int keystone_resume_enclave(unsigned long data)
   return 0;
 }
 
+void
+print_hex(void* buffer, size_t len) {
+  int i;
+  for (i = 0; i < len; i += sizeof(uintptr_t)) {
+    keystone_info("%.16lx ", *((uintptr_t*)((uintptr_t)buffer + i)));
+  }
+  keystone_info("\n");
+}
+
 int keystone_attest_sm(unsigned long data)
 {
   struct sbiret ret;
+
+  struct keystone_sbi_attest_sm_t sm_report;
+
   struct keystone_ioctl_attest_sm *arg = (struct keystone_ioctl_attest_sm*) data;
 
-  ret = sbi_sm_attest_sm();
+  // keystone_info("user report addr = 0x%lx\n", (unsigned long)usr_report);
 
-  // if (ret.error) {
-  //   keystone_err("keystone_attest_sm: SBI call failed with error code %ld\n", ret.error);
-  //   return -EINVAL;
+  // struct sm_report_t* report = kmalloc(sizeof(struct sm_report_t), GFP_KERNEL);
+  // if (!report) {
+  //   keystone_err("keystone_attest_sm: failed to allocate memory for report\n");
+  //   return -ENOMEM;
   // }
 
-  // /* Copy the report to user space */
-  // if (copy_to_user(&arg->report, &ret.value, sizeof(sm_report_t))) {
+  keystone_info("keystone_attest_sm: Attesting Secure Monitor\n");
+
+  ret = sbi_sm_attest_sm((unsigned long)__pa(&sm_report));
+
+  if (ret.error) {
+    keystone_err("keystone_attest_sm: SBI call failed with error code %ld\n", ret.error);
+    return -EINVAL;
+  }
+
+  memcpy(arg->hash, sm_report.hash, sizeof(sm_report.hash));
+  memcpy(arg->public_key, sm_report.public_key, sizeof(sm_report.public_key));
+  memcpy(arg->signature, sm_report.signature, sizeof(sm_report.signature));
+
+  // print_hex(report, sizeof(struct sm_report_t));
+
+  // if (copy_to_user((void __user*) usr_report, report, sizeof(struct sm_report_t))) {
+  //   keystone_err("keystone_attest_sm: failed to copy report to user space\n");
+  //   kfree(report);
   //   return -EFAULT;
   // }
+
+  // kfree(report);
 
   return 0;
 }
@@ -279,10 +310,9 @@ long keystone_ioctl(struct file *filep, unsigned int cmd, unsigned long arg)
     case KEYSTONE_IOC_UTM_INIT:
       ret = utm_init_ioctl(filep, (unsigned long) data);
       break;
-    case KEYSTONE_IOC_ATTEST_SM: {
+    case KEYSTONE_IOC_ATTEST_SM:
       ret = keystone_attest_sm((unsigned long) data);
       break;
-    }
     default:
       return -ENOSYS;
   }

@@ -663,18 +663,15 @@ err_unlock:
 
 unsigned long attest_sm(uintptr_t report_ptr)
 {
-  struct sm_report_t* report = (struct sm_report_t*) report_ptr;
+  struct keystone_sbi_attest_sm_t* report = (struct keystone_sbi_attest_sm_t*) report_ptr;
 
   if (!report)
     return SBI_ERR_SM_ENCLAVE_ILLEGAL_ARGUMENT;
 
-  /* copy device public key */
- // sbi_memcpy(report->dev_public_key, dev_public_key, PUBLIC_KEY_SIZE);
-
   /* copy SM report */
-  sbi_memcpy(report->hash, sm_hash, MDSIZE);
-  sbi_memcpy(report->public_key, sm_public_key, PUBLIC_KEY_SIZE);
-  sbi_memcpy(report->signature, sm_signature, SIGNATURE_SIZE);
+  sbi_memcpy(report->hash, sm_hash, 64);
+  sbi_memcpy(report->public_key, sm_public_key, 32);
+  sbi_memcpy(report->signature, sm_signature, 64);
 
   return SBI_ERR_SM_ENCLAVE_SUCCESS;
 }

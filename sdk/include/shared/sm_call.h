@@ -1,8 +1,6 @@
 #ifndef __SM_CALL_H__
 #define __SM_CALL_H__
 
-#include "attest.h"
-
 // BKE (Berkeley Keystone Enclave)
 #define SBI_EXT_EXPERIMENTAL_KEYSTONE_ENCLAVE 0x08424b45
 
@@ -70,7 +68,9 @@ struct keystone_sbi_create_t {
 };
 
 struct keystone_sbi_attest_sm_t {
-  struct sm_report_t report;
+  char hash[64];          // SHA-256 hash of the SM
+  char public_key[32];   // Public key of the SM
+  char signature[64];    // Signature of the SM
 };
 
 #endif  // __SM_CALL_H__

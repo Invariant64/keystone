@@ -6,7 +6,12 @@
 
 #include <string>
 
-#include "keys_const.h"
+typedef unsigned char byte;
+
+#define ATTEST_DATA_MAXLEN 1024
+#define MDSIZE 64
+#define SIGNATURE_SIZE 64
+#define PUBLIC_KEY_SIZE 32
 
 class PublicKey {
  public:

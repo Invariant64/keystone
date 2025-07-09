@@ -10,8 +10,6 @@
 
 #include "sm_call.h"
 
-// #include "../verifier/report.h"
-
 // Linux generic TEE subsystem magic defined in <linux/tee.h>
 #define KEYSTONE_IOC_MAGIC 0xa4
 
@@ -29,7 +27,7 @@
 #define KEYSTONE_IOC_UTM_INIT \
   _IOR(KEYSTONE_IOC_MAGIC, 0x07, struct keystone_ioctl_create_enclave)
 #define KEYSTONE_IOC_ATTEST_SM \
-  _IOR(KEYSTONE_IOC_MAGIC, 0x08, struct keystone_ioctl_attest_sm)
+  _IOWR(KEYSTONE_IOC_MAGIC, 0x08, struct keystone_ioctl_attest_sm)
 
 #define RT_NOEXEC 0
 #define USER_NOEXEC 1
@@ -62,6 +60,10 @@ struct keystone_ioctl_run_enclave {
   uintptr_t value;
 };
 
-#include "attest.h"
+struct keystone_ioctl_attest_sm {
+  char hash[64];
+  char public_key[32];
+  char signature[64];
+};
 
 #endif

@@ -39,6 +39,6 @@ unsigned long
 sbi_sm_call_plugin(uintptr_t plugin_id, uintptr_t call_id, uintptr_t arg0, uintptr_t arg1);
 
 unsigned long
-sbi_sm_attest_sm(uintptr_t enclave_id);
+sbi_sm_attest_sm(uintptr_t args);
 
 #endif

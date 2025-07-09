@@ -148,21 +148,32 @@ Enclave::init(const char* eapppath, const char* runtimepath, const char* loaderp
 }
 
 Error
+Enclave::initDevice() {
+  if (pDevice == NULL) {
+    pDevice = new KeystoneDevice();
+  }
+  if (!pDevice->initDevice()) {
+    destroy();
+    return Error::DeviceInitFailure;
+  }
+  return Error::Success;
+}
+
+Error
 Enclave::init(
     const char* eapppath, const char* runtimepath, const char* loaderpath, Params _params,
     uintptr_t alternatePhysAddr) {
   params = _params;
 
   pMemory = new PhysicalEnclaveMemory();
-  pDevice = new KeystoneDevice();
 
   ElfFile* enclaveFile = new ElfFile(eapppath);
   ElfFile* runtimeFile = new ElfFile(runtimepath);
   ElfFile* loaderFile = new ElfFile(loaderpath);
 
-  if (!pDevice->initDevice(params)) {
-    destroy();
-    return Error::DeviceInitFailure;
+  // if device is not initialized, initialize it
+  if (pDevice == NULL) {
+    initDevice();
   }
 
   ElfFile* elfFiles[3] = {enclaveFile, runtimeFile, loaderFile};
@@ -274,8 +285,8 @@ Enclave::registerOcallDispatch(OcallFunc func) {
 }
 
 Error
-Enclave::attestSM(const char* dev_public_key, uintptr_t* ret) {
-  return pDevice->attestSM(dev_public_key, ret);
+Enclave::attestSM(char* hash, char* publicKey, char* signature) {
+  return pDevice->attestSM(hash, publicKey, signature);
 }
 
 }  // namespace Keystone
