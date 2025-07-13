@@ -10,16 +10,23 @@ QEMU_MEM        ?= 2G
 QEMU_SMP        ?= 1
 
 
+# QEMU_FLAGS := -m $(QEMU_MEM) -smp $(QEMU_SMP) -nographic \
+#                 -machine virt,rom=$(BUILDROOT_BUILDDIR)/images/bootrom.bin \
+#                 -bios $(BUILDROOT_BUILDDIR)/images/fw_jump.elf \
+#                 -kernel $(BUILDROOT_BUILDDIR)/images/Image \
+#                 -drive file=$(BUILDROOT_BUILDDIR)/images/rootfs.ext2,format=raw,id=hd0 \
+#                 -device virtio-blk-device,drive=hd0 \
+#                 -append "console=ttyS0 ro root=/dev/vda" \
+#                 -netdev user,id=net0,net=192.168.100.1/24,dhcpstart=192.168.100.128,hostfwd=tcp::$(KEYSTONE_PORT)-:22 \
+#                 -device virtio-net-device,netdev=net0 \
+#                 -device virtio-rng-pci \
+
 QEMU_FLAGS := -m $(QEMU_MEM) -smp $(QEMU_SMP) -nographic \
-                -machine virt,rom=$(BUILDROOT_BUILDDIR)/images/bootrom.bin \
-                -bios $(BUILDROOT_BUILDDIR)/images/fw_jump.elf \
-                -kernel $(BUILDROOT_BUILDDIR)/images/Image \
-                -drive file=$(BUILDROOT_BUILDDIR)/images/rootfs.ext2,format=raw,id=hd0 \
-                -device virtio-blk-device,drive=hd0 \
-                -append "console=ttyS0 ro root=/dev/vda" \
-                -netdev user,id=net0,net=192.168.100.1/24,dhcpstart=192.168.100.128,hostfwd=tcp::$(KEYSTONE_PORT)-:22 \
-                -device virtio-net-device,netdev=net0 \
-                -device virtio-rng-pci \
+              -machine virt,rom=$(BUILDROOT_BUILDDIR)/images/bootrom.bin \
+              -bios $(BUILDROOT_BUILDDIR)/images/fw_payload.elf \
+              -netdev user,id=net0,net=192.168.100.1/24,dhcpstart=192.168.100.128,hostfwd=tcp::$(KEYSTONE_PORT)-:22 \
+              -device virtio-net-device,netdev=net0 \
+              -device virtio-rng-pci \
 
 ifneq ($(KEYSTONE_DEBUG),)
         QEMU_FLAGS += $(QEMU_DEBUG)

@@ -12,3 +12,6 @@ endif
 
 platform-cflags-y = -I$(KEYSTONE_SM)/src -I$(src_dir)/platform/$(PLATFORM)/include \
                         -I$(KEYSTONE_SDK_DIR)/include/shared
+
+# FW_TEXT_START = 0x80010000
+FW_FDT_PATH=$(KEYSTONE)/xiangshan-fpga.dtb
