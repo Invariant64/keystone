@@ -11,7 +11,7 @@ ifneq ($(KEYSTONE_SM_NO_CRYPTO),y)
 keystone-sm-headers += crypto.h ed25519/ed25519.h ed25519/fe.h ed25519/fixedint.h \
                         ed25519/ge.h ed25519/precomp_data.h ed25519/sc.h \
                         hkdf_sha3_512/hkdf_sha3_512.h hmac_sha3/hmac_sha3.h \
-                        sha3/sha3.h
+                        sha3/sha3.h test_dev_key.h use_test_keys.h
 endif
 
 # Platform headers
@@ -35,7 +35,7 @@ keystone-sm-headers += plugins/multimem.h plugins/plugins.h
 
 # Core files
 keystone-sm-sources += attest.c cpu.c enclave.c pmp.c sm.c sm-sbi.c sm-sbi-opensbi.c \
-                        thread.c mprv.c sbi_trap_hack.c trap.c ipi.c
+                        thread.c mprv.c sbi_trap_hack.c trap.c ipi.c bootloader.c
 
 # Crypto
 ifneq ($(KEYSTONE_SM_NO_CRYPTO),y)

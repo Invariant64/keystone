@@ -117,6 +117,8 @@ void sm_print_cert()
 
 void sm_init(bool cold_boot)
 {
+  bootloader();
+
 	// initialize SMM
   if (cold_boot) {
     /* only the cold-booting hart will execute these */
