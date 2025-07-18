@@ -12,3 +12,5 @@ endif
 
 platform-cflags-y = -I$(KEYSTONE_SM)/src -I$(src_dir)/platform/$(PLATFORM)/include \
                         -I$(KEYSTONE_SDK_DIR)/include/shared
+
+FW_FDT_PATH=$(KEYSTONE)/fpga.dtb

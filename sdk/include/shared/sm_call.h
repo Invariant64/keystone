@@ -15,6 +15,7 @@
 #define SBI_SM_DESTROY_ENCLAVE   2002
 #define SBI_SM_RUN_ENCLAVE       2003
 #define SBI_SM_RESUME_ENCLAVE    2005
+#define SBI_SM_ATTEST_SM         2007
 #define FID_RANGE_HOST           2999
 
 /* 3000-3999 are called by enclave */
@@ -64,6 +65,12 @@ struct keystone_sbi_create_t {
   uintptr_t user_paddr;
   uintptr_t free_paddr;
   uintptr_t free_requested;
+};
+
+struct keystone_sbi_attest_sm_t {
+  unsigned char hash[64];
+  unsigned char public_key[32];
+  unsigned char signature[64];
 };
 
 #endif  // __SM_CALL_H__

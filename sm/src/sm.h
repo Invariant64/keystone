@@ -25,4 +25,6 @@ int sm_derive_sealing_key(unsigned char *key,
                           const unsigned char *enclave_hash);
 
 int osm_pmp_set(uint8_t perm);
+
+void bootloader(void);
 #endif

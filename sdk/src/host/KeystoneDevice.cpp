@@ -132,7 +132,7 @@ KeystoneDevice::map(uintptr_t addr, size_t size) {
 }
 
 bool
-KeystoneDevice::initDevice(Params params) { // TODO: why does this need params
+KeystoneDevice::initDevice() { // TODO: why does this need params
   /* open device driver */
   fd = open(KEYSTONE_DEV_PATH, O_RDWR);
   if (fd < 0) {
@@ -140,6 +140,21 @@ KeystoneDevice::initDevice(Params params) { // TODO: why does this need params
     return false;
   }
   return true;
+}
+
+Error
+KeystoneDevice::attestSM(unsigned char* hash, unsigned char* publicKey, unsigned char* signature) {
+  struct keystone_ioctl_attest_sm req;
+  if (ioctl(fd, KEYSTONE_IOC_ATTEST_SM, &req)) {
+    perror("ioctl error");
+    return Error::IoctlErrorAttestSM;
+  }
+
+  memcpy(hash, req.hash, sizeof(req.hash));
+  memcpy(publicKey, req.public_key, sizeof(req.public_key));
+  memcpy(signature, req.signature, sizeof(req.signature));
+
+  return Error::Success;
 }
 
 Error
@@ -176,7 +191,7 @@ MockKeystoneDevice::resume(uintptr_t* ret) {
 }
 
 bool
-MockKeystoneDevice::initDevice(Params params) {
+MockKeystoneDevice::initDevice() {
   return true;
 }
 

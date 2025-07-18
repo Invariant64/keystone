@@ -661,6 +661,21 @@ err_unlock:
   return ret;
 }
 
+unsigned long attest_sm(uintptr_t report_ptr)
+{
+  struct keystone_sbi_attest_sm_t* report = (struct keystone_sbi_attest_sm_t*) report_ptr;
+
+  if (!report)
+    return SBI_ERR_SM_ENCLAVE_ILLEGAL_ARGUMENT;
+
+  /* copy SM report */
+  sbi_memcpy(report->hash, sm_hash, 64);
+  sbi_memcpy(report->public_key, sm_public_key, 32);
+  sbi_memcpy(report->signature, sm_signature, 64);
+
+  return SBI_ERR_SM_ENCLAVE_SUCCESS;
+}
+
 unsigned long get_sealing_key(uintptr_t sealing_key, uintptr_t key_ident,
                                  size_t key_ident_size, enclave_id eid)
 {
