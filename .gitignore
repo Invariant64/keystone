@@ -9,3 +9,5 @@ riscv32/
 *.Identifier
 compile_commands.json
 *.cache
+
+test/

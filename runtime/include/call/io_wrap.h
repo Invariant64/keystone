@@ -12,6 +12,8 @@ uintptr_t io_syscall_writev(int fd, const struct iovec *iov, int iovcnt);
 uintptr_t io_syscall_readv(int fd, const struct iovec *iov, int iovcnt);
 uintptr_t io_syscall_openat(int dirfd, char* path,
                             int flags, mode_t mode);
+uintptr_t io_syscall_dup(int oldfd);
+uintptr_t io_syscall_ioctl(int fd, unsigned long request, uintptr_t arg);
 uintptr_t io_syscall_fstatat(int dirfd, char *pathname, struct stat *statbuf,
                              int flags);
 uintptr_t io_syscall_fstat(int fd, struct stat *statbuf);

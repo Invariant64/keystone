@@ -45,7 +45,7 @@ calculate_required_pages(ElfFile** elfFiles, size_t numElfFiles) {
 
   /* Add one page each for bss segments of runtime and eapp */ 
   // TODO: add space for stack?
-  req_pages += 16;
+  req_pages += 32;
   return req_pages;
 }
 

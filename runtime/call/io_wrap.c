@@ -317,6 +317,39 @@ uintptr_t io_syscall_pipe(int *fds){
   return ret;
 }
 
+uintptr_t io_syscall_dup(int oldfd){ // 添加 io_syscall_dup 实现
+  struct edge_syscall* edge_syscall = (struct edge_syscall*)edge_call_data_ptr();
+  sargs_SYS_dup* args = (sargs_SYS_dup*)edge_syscall->data;
+  edge_syscall->syscall_num = SYS_dup;
+
+  args->oldfd = oldfd;
+
+  size_t totalsize = (sizeof(struct edge_syscall) +
+                      sizeof(sargs_SYS_dup));
+
+  uintptr_t ret = dispatch_edgecall_syscall(edge_syscall, totalsize);
+  print_strace("[runtime] proxied dup (%i) = %li\r\n", oldfd, ret);
+  return ret;
+}
+
+uintptr_t io_syscall_ioctl(int fd, unsigned long request, uintptr_t arg){ // 添加 io_syscall_ioctl 实现
+  struct edge_syscall* edge_syscall = (struct edge_syscall*)edge_call_data_ptr();
+  sargs_SYS_ioctl* args = (sargs_SYS_ioctl*)edge_syscall->data;
+
+  edge_syscall->syscall_num = SYS_ioctl;
+
+  args->fd = fd;
+  args->request = request;
+  args->arg = arg;
+
+  size_t totalsize = (sizeof(struct edge_syscall) +
+                      sizeof(sargs_SYS_ioctl));
+
+  uintptr_t ret = dispatch_edgecall_syscall(edge_syscall, totalsize);
+  print_strace("[runtime] proxied ioctl (fd:%i, req:%lu) = %li\r\n", fd, request, ret);
+  return ret;
+}
+
 uintptr_t io_syscall_epoll_create(int size){
   uintptr_t ret = -1;
   struct edge_syscall* edge_syscall = (struct edge_syscall*)edge_call_data_ptr();

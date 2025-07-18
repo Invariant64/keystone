@@ -6,6 +6,7 @@
 #include <sys/socket.h>
 #include <sys/select.h>
 #include <sys/sendfile.h>
+#include <sys/ioctl.h> 
 // Special edge-call handler for syscall proxying
 void
 incoming_syscall(struct edge_call* edge_call) {
@@ -89,6 +90,14 @@ incoming_syscall(struct edge_call* edge_call) {
     case (SYS_pipe2):;
       int *fds = (int *) syscall_info->data;
       ret = pipe(fds); 
+      break;
+    case (SYS_dup):; // 添加 SYS_dup 实现
+      sargs_SYS_dup* dup_args = (sargs_SYS_dup*) syscall_info->data;
+      ret = dup(dup_args->oldfd);
+      break;
+    case (SYS_ioctl):;
+      sargs_SYS_ioctl* ioctl_args = (sargs_SYS_ioctl*) syscall_info->data;
+      ret = ioctl(ioctl_args->fd, ioctl_args->request, (void*)ioctl_args->arg);
       break;
     case (SYS_epoll_create1):;
       sargs_SYS_epoll_create1 *epoll_args = (sargs_SYS_epoll_create1 *) syscall_info->data;
