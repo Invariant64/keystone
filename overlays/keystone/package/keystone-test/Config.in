@@ -1,0 +1,14 @@
+config BR2_PACKAGE_KEYSTONE_TEST
+        bool "Keystone test"
+        depends on BR2_PACKAGE_HOST_KEYSTONE_SDK
+        help
+          test
+
+if BR2_PACKAGE_KEYSTONE_TEST
+
+config BR2_PACKAGE_KEYSTONE_TEST_STRESS
+        bool "Build stress test"
+        help
+          Build the stress test suite from keystone-test.
+
+endif

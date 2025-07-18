@@ -63,7 +63,7 @@ main(int argc, char** argv) {
     return 0;
   }
 
-  int self_timing = 0;
+  // int self_timing = 0; // Removed, timing will always be active
   int load_only   = 0;
 
   size_t untrusted_size = 2 * 1024 * 1024;
@@ -72,7 +72,7 @@ main(int argc, char** argv) {
   unsigned long retval = 0;
 
   static struct option long_options[] = {
-      {"time", no_argument, &self_timing, 1},
+      // {"time", no_argument, &self_timing, 1}, // Removed
       {"load-only", no_argument, &load_only, 1},
       {"utm-size", required_argument, 0, 'u'},
       {"freemem-size", required_argument, 0, 'f'},
@@ -108,39 +108,57 @@ main(int argc, char** argv) {
 
   Keystone::Enclave enclave;
   Keystone::Params params;
-  unsigned long cycles1, cycles2, cycles3, cycles4;
+  // unsigned long cycles1, cycles2, cycles3, cycles4; // Removed
+  struct timespec time1, time2, time3, time4; // Added for clock_gettime
+  long long init_time, run_time; // Added for nanosecond calculations
 
   params.setFreeMemSize(freemem_size);
   params.setUntrustedSize(untrusted_size);
 
-  if (self_timing) {
-    asm volatile("rdcycle %0" : "=r"(cycles1));
-  }
+  // if (self_timing) { // Removed
+  //   asm volatile("rdcycle %0" : "=r"(cycles1));
+  // } // Removed
+  clock_gettime(CLOCK_MONOTONIC, &time1); // Start init time measurement
 
   enclave.init(eapp_file, rt_file, ld_file, params);
 
-  if (self_timing) {
-    asm volatile("rdcycle %0" : "=r"(cycles2));
-  }
+  // if (self_timing) { // Removed
+  //   asm volatile("rdcycle %0" : "=r"(cycles2));
+  // } // Removed
+  clock_gettime(CLOCK_MONOTONIC, &time2); // End init time measurement
 
   edge_init(&enclave);
 
-  if (self_timing) {
-    asm volatile("rdcycle %0" : "=r"(cycles3));
-  }
+  // if (self_timing) { // Removed
+  //   asm volatile("rdcycle %0" : "=r"(cycles3));
+  // } // Removed
+  clock_gettime(CLOCK_MONOTONIC, &time3); // Start run time measurement
 
-  uintptr_t encl_ret;
+  uintptr_t encl_ret = 0; // Initialized to 0
   if (!load_only) enclave.run(&encl_ret);
 
   if (retval_exist && encl_ret != retval) {
     printf("[FAIL] enclave returned a wrong value (%d != %d)\r\n", encl_ret, retval);
   }
 
-  if (self_timing) {
-    asm volatile("rdcycle %0" : "=r"(cycles4));
-    printf("[keystone-test] Init: %lu cycles\r\n", cycles2 - cycles1);
-    printf("[keystone-test] Runtime: %lu cycles\r\n", cycles4 - cycles3);
-  }
+  // if (self_timing) { // Removed
+  //   asm volatile("rdcycle %0" : "=r"(cycles4));
+  //   printf("[keystone-test] Init: %lu cycles\r\n", cycles2 - cycles1);
+  //   printf("[keystone-test] Runtime: %lu cycles\r\n", cycles4 - cycles3);
+  // } // Removed
+
+  clock_gettime(CLOCK_MONOTONIC, &time4); // End run time measurement
+
+  // Calculate elapsed time in nanoseconds
+  init_time = (time2.tv_sec - time1.tv_sec) * 1e9 + 
+              (time2.tv_nsec - time1.tv_nsec);
+  run_time = (time4.tv_sec - time3.tv_sec) * 1e9 + 
+             (time4.tv_nsec - time3.tv_nsec);
+
+  std::cout << "Enclave init time: " << init_time << " ns" << std::endl; // Print init time
+  std::cout << "Enclave run time: " << run_time << " ns" << std::endl; // Print run time
+
+  std::cout << "Enclave returned: " << encl_ret << std::endl;
 
   return 0;
 }

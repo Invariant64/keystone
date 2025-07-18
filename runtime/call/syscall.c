@@ -330,7 +330,12 @@ void handle_syscall(struct encl_ctx* ctx)
   case(SYS_pipe2):
     ret = io_syscall_pipe((int*)arg0);
     break;
-
+  case(SYS_dup): // 添加 SYS_dup 实现
+    ret = io_syscall_dup((int)arg0);
+    break;
+  case(SYS_ioctl): // 添加 SYS_ioctl 实现
+    ret = io_syscall_ioctl((int)arg0, (unsigned long)arg1, (uintptr_t)arg2);
+    break;
 #endif /* USE_IO_SYSCALL */
 
 #ifdef USE_NET_SYSCALL

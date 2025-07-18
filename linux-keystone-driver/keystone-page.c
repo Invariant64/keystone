@@ -106,6 +106,7 @@ int utm_init(struct utm* utm, size_t untrusted_size)
   utm->ptr = (void*) __get_free_pages(GFP_HIGHUSER, order);
   if (!utm->ptr) {
     keystone_err("failed to allocate UTM (size = %i bytes)\n",(1<<order));
+    // keystone_err("failed to allocate UTM (size = %lu bytes)\n", (unsigned long)(count * PAGE_SIZE));
     return -ENOMEM;
   }
 

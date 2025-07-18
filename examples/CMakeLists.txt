@@ -37,3 +37,22 @@ add_subdirectory(attestation)
 add_subdirectory(tests)
 # add_subdirectory(lenet)
 add_subdirectory(onnx)
+
+add_subdirectory(fileio)
+# add_subdirectory(stream)
+
+# iozone
+add_subdirectory(iozone)
+
+#rv8-bench
+add_subdirectory(dhrystone)
+add_subdirectory(primes)
+add_subdirectory(aes)
+add_subdirectory(bigint)
+add_subdirectory(miniz)
+add_subdirectory(norx)
+add_subdirectory(qsort)
+add_subdirectory(sha512)
+
+#coremark
+add_subdirectory(coremark)

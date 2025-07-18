@@ -4,7 +4,7 @@ set(host_bin hello-native-runner)
 set(host_src host/host_native.cpp)
 set(package_name "hello-native.ke")
 set(package_script "./hello-native-runner hello-native eyrie-rt loader.bin")
-set(eyrie_plugins "none")
+set(eyrie_plugins "env_setup DEBUG INTERNAL_STRACE")
 
 # eapp
 
