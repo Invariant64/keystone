@@ -46,7 +46,7 @@ class Enclave {
   void loadElf(ElfFile* elfFile);
 
   bool initFiles(const char*, const char*);
-  bool prepareEnclaveMemory(size_t requiredPages, uintptr_t alternatePhysAddr);
+  bool prepareEnclaveMemory(size_t requiredPages, uintptr_t alternatePhysAddr, int reservedID);
   bool initMemory();
 
  public:
@@ -67,7 +67,8 @@ class Enclave {
   Error run(uintptr_t* ret = nullptr);
   
   Error initDevice();
-  Error attestSM(unsigned char* hash, unsigned char* publicKey, unsigned char* signature);
+  Error request(unsigned char* hash, unsigned char* publicKey, unsigned char* signature,
+      int reqmemsize, int* respmemsize, int* reservedID);
 };
 
 uint64_t

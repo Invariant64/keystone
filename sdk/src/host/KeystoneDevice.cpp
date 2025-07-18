@@ -10,9 +10,10 @@ namespace Keystone {
 KeystoneDevice::KeystoneDevice() { eid = -1; }
 
 Error
-KeystoneDevice::create(uint64_t minPages) {
+KeystoneDevice::create(uint64_t minPages, int reservedID) {
   struct keystone_ioctl_create_enclave encl;
   encl.min_pages = minPages;
+  encl.reserved_id = reservedID;
 
   if (ioctl(fd, KEYSTONE_IOC_CREATE_ENCLAVE, &encl)) {
     perror("ioctl error");
@@ -143,8 +144,11 @@ KeystoneDevice::initDevice() { // TODO: why does this need params
 }
 
 Error
-KeystoneDevice::attestSM(unsigned char* hash, unsigned char* publicKey, unsigned char* signature) {
+KeystoneDevice::request(unsigned char* hash, unsigned char* publicKey, unsigned char* signature,
+    int reqmemsize, int* respmemsize, int* reservedID) {
   struct keystone_ioctl_attest_sm req;
+  req.req_mem_size = reqmemsize;
+  
   if (ioctl(fd, KEYSTONE_IOC_ATTEST_SM, &req)) {
     perror("ioctl error");
     return Error::IoctlErrorAttestSM;
@@ -153,6 +157,9 @@ KeystoneDevice::attestSM(unsigned char* hash, unsigned char* publicKey, unsigned
   memcpy(hash, req.hash, sizeof(req.hash));
   memcpy(publicKey, req.public_key, sizeof(req.public_key));
   memcpy(signature, req.signature, sizeof(req.signature));
+
+  *respmemsize = req.resp_mem_size;
+  *reservedID = req.reserved_id;
 
   return Error::Success;
 }

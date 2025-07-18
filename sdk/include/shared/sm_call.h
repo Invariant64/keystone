@@ -71,6 +71,10 @@ struct keystone_sbi_attest_sm_t {
   unsigned char hash[64];
   unsigned char public_key[32];
   unsigned char signature[64];
+
+  int req_mem_size;
+  int resp_mem_size;
+  int reserved_id;
 };
 
 #endif  // __SM_CALL_H__

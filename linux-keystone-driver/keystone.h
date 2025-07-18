@@ -73,12 +73,25 @@ int keystone_rtld_init_app(struct enclave* enclave, void* __user app_ptr, size_t
 int keystone_rtld_init_untrusted(struct enclave* enclave, void* untrusted_ptr, size_t untrusted_size);
 
 struct enclave* get_enclave_by_id(unsigned int ueid);
-struct enclave* create_enclave(unsigned long min_pages);
+struct enclave* create_enclave(unsigned long min_pages, int reservedID);
 int destroy_enclave(struct enclave* enclave);
 
 unsigned int enclave_idr_alloc(struct enclave* enclave);
 struct enclave* enclave_idr_remove(unsigned int ueid);
 struct enclave* get_enclave_by_id(unsigned int ueid);
+
+#define KEYSTONE_RESERVED_MAX 16
+
+struct keystone_reserved {
+  bool valid;
+  int id;
+  struct epm* epm;
+};
+
+int reserved_id_alloc(void);
+int reserved_memory_alloc(int id, int size);
+void reserved_release(int id);
+struct keystone_reserved* get_reserved_by_id(int id);
 
 static inline uintptr_t  epm_satp(struct epm* epm) {
   return ((uintptr_t)epm->root_page_table >> RISCV_PGSHIFT | SATP_MODE_CHOICE);

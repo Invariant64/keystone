@@ -33,14 +33,18 @@ class Params {
   Params() {
     untrusted_size = DEFAULT_UNTRUSTED_SIZE;
     freemem_size   = DEFAULT_FREEMEM_SIZE;
+    reserved_id    = -1;
   }
 
   void setUntrustedSize(uint64_t size) { untrusted_size = size; }
   void setFreeMemSize(uint64_t size) { freemem_size = size; }
   uintptr_t getUntrustedSize() { return untrusted_size; }
   uintptr_t getFreeMemSize() { return freemem_size; }
+  void setReservedID(int id) { reserved_id = id; }
+  int getReservedID() { return reserved_id; }
 
  private:
+  int reserved_id;
   uint64_t untrusted_size;
   uint64_t freemem_size;
 };

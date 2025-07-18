@@ -41,6 +41,7 @@ struct keystone_ioctl_create_enclave {
   // host -> driver
   uintptr_t min_pages; // create
   uintptr_t utm_size; // utm_init
+  int reserved_id; // request
 
   // host -> driver // finalize
   uintptr_t runtime_paddr;
@@ -64,6 +65,9 @@ struct keystone_ioctl_attest_sm {
   unsigned char hash[64];
   unsigned char public_key[32];
   unsigned char signature[64];
+  int req_mem_size;
+  int resp_mem_size;
+  int reserved_id;
 };
 
 #endif

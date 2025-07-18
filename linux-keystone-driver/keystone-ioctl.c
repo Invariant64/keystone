@@ -17,7 +17,7 @@ int keystone_create_enclave(struct file *filep, unsigned long arg)
   struct keystone_ioctl_create_enclave *enclp = (struct keystone_ioctl_create_enclave *) arg;
 
   struct enclave *enclave;
-  enclave = create_enclave(enclp->min_pages);
+  enclave = create_enclave(enclp->min_pages, enclp->reserved_id);
 
   if (enclave == NULL) {
     return -ENOMEM;
@@ -257,6 +257,14 @@ int keystone_attest_sm(unsigned long data)
   keystone_info("keystone_attest_sm: Attestation report copied to driver space\n");
 
   kfree(sm_report);
+
+  arg->reserved_id = reserved_id_alloc();
+  if (arg->reserved_id < 0) {
+    keystone_err("keystone_attest_sm: Failed to allocate reserved ID\n");
+    return -EINVAL;
+  }
+
+  arg->resp_mem_size = reserved_memory_alloc(arg->reserved_id, arg->req_mem_size);
 
   return 0;
 }

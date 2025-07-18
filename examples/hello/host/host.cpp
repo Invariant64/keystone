@@ -32,7 +32,11 @@ main(int argc, char** argv) {
   unsigned char hash[64];
   unsigned char public_key[32];
   unsigned char signature[64];
-  enclave.attestSM(hash, public_key, signature);
+  int reqmemsize = 1400 * 1024;
+  int respmemsize = 0;
+  int reserved_id = -1;
+
+  enclave.request(hash, public_key, signature, reqmemsize, &respmemsize, &reserved_id);
 
   unsigned char message[96];
   memcpy(message, hash, 64);
@@ -43,16 +47,30 @@ main(int argc, char** argv) {
       64 + 32, dev_public_key);
   
   if (sm_valid) {
-    printf("\nSM Attestation succeeded, starting EAPP!\n");
+    printf("\nSM Attestation succeeded!\n");
   } else {
     printf("\nSM Attestation failed, exiting!\n");
     return -1;
   }
 
-  params.setFreeMemSize(256 * 1024);
-  params.setUntrustedSize(256 * 1024);
+  printf("Reserved ID: %d, Response Memory Size: %d\n", reserved_id, respmemsize);
 
-  enclave.init(argv[1], argv[2], argv[3], params);
+  if (reqmemsize != respmemsize) {
+    printf("Requested memory size (%d) does not match response size (%d)\n",
+           reqmemsize, respmemsize);
+    return -1;
+  }
+
+  params.setFreeMemSize(respmemsize);
+  params.setUntrustedSize(256 * 1024);
+  params.setReservedID(reserved_id);
+
+  if (enclave.init(argv[1], argv[2], argv[3], params) != Error::Success) {
+    printf("Failed to initialize enclave!\n");
+    return -1;
+  } else {
+    printf("Enclave initialized successfully!\n");
+  }
 
   enclave.registerOcallDispatch(incoming_call_dispatch);
   edge_call_init_internals(
