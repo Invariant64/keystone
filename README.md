@@ -39,3 +39,17 @@ scp -P 9821 -r root@localhost:/usr/share/keystone/examples/stress_results/ examp
 cd examples
 python3 plot_results.py
 ```
+
+8. use sysstat to see the burdern of cpu
+```bash
+cd examples/sysstat
+
+# look README.MD to compile sysstat
+
+# copy sysstat to your keystone directory
+scp -P 9821 -r examples/sysstat/exe/bin/* root@localhost:/usr/bin
+
+# run sysstat
+#open another terminal
+mpstat -P ALL 5 1
+```

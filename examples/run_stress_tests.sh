@@ -6,7 +6,6 @@
 cd /usr/share/keystone/examples/ || { echo "错误: 无法进入 /usr/share/keystone/examples/ 目录。请检查路径是否存在或权限。" | tee -a "$LOG_FILE"; exit 1; }
 
 # 配置
-# STRESS_PATH="stress"
 STRESS_PATH="stress-ng"
 HOST_PATH="" # host 程序在当前目录，不再需要指定路径前缀
 # N_VALUES=(0 1 2 4 8 16 32 64 128) # worker 数量的 N 值 (适用于 cpu, vm, io)，0 代表基线，按指数增长
@@ -261,7 +260,7 @@ run_stress_test() {
 
 # 根据标记执行测试
 if $RUN_CPU; then
-    run_stress_test "cpu" "--cpu"
+    run_stress_test "cpu" "--cpu" "--cpu-method" "all"
 fi
 
 if $RUN_VM; then
@@ -269,7 +268,7 @@ if $RUN_VM; then
 fi
 
 if $RUN_IO; then
-    run_stress_test "io" "--io" "--vm-bytes" "256M" "--hdd-bytes" "1G" # 增加 IO 强度
+    run_stress_test "io" "--iomix"
 fi
 
 if $RUN_VM_HANG; then

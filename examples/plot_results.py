@@ -53,18 +53,8 @@ def plot_stress_results(csv_dir, output_file, max_n=None):
             
             plot_data_dict[full_label] = (n_values_sorted_filtered, times_sorted_filtered)
 
-    # Define the desired order for the legend
-    desired_order = [
-        'CPU_iozone.ke',
-        'HDD_iozone.ke',
-        'CPU_dhrystone.ke',
-        'HDD_dhrystone.ke'
-    ]
-
-    for label in desired_order:
-        if label in plot_data_dict:
-            n_values, times = plot_data_dict[label]
-            plt.plot(n_values, times, marker='o', label=label)
+    for label, (n_values, times) in plot_data_dict.items():
+        plt.plot(n_values, times, marker='o', label=label)
 
     plt.legend()
     plt.figtext(0.5, 0.01, 'N: Number of stress worker threads as configured in run_stress_tests.sh', ha='center', fontsize=10)

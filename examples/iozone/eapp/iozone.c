@@ -1660,12 +1660,12 @@ char **argv;
     static char *iozone_argv_hardcoded[] = {
         (char*)"./iozone",
 		(char*)"-e",(char*)"-I",
-        (char*)"-s", (char*)"1m",
+        (char*)"-s", (char*)"4m",
         (char*)"-r", (char*)"4k",
         (char*)"-i", (char*)"0",
         (char*)"-i", (char*)"1",
+		(char*)"-i", (char*)"2",
         (char*)"-f", (char*)"testfile",
-        (char*)"-R", (char*)"report.csv",
         NULL // argv 数组的终止符
     };
 
