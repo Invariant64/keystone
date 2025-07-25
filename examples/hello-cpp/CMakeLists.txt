@@ -1,21 +1,16 @@
-set(eapp_bin stream)
-set(eapp_src eapp/stream.c)
-set(host_bin stream-runner)
+set(eapp_bin hello-cpp)
+set(eapp_src eapp/hello-cpp.cc)
+set(host_bin hello-cpp-runner)
 set(host_src host/host.cpp)
-set(package_name "stream.ke")
-set(package_script "./stream-runner stream eyrie-rt loader.bin")
-set(eyrie_plugins "io_syscall linux_syscall env_setup INTERNAL_STRACE DEBUG")
+set(package_name "hello-cpp.ke")
+set(package_script "./hello-cpp-runner hello-cpp eyrie-rt loader.bin")
+set(eyrie_plugins "io_syscall linux_syscall env_setup DEBUG INTERNAL_STRACE")
 
 # eapp
 
 add_executable(${eapp_bin} ${eapp_src})
-target_link_libraries(${eapp_bin}
-    "-static"
-    "-lm"
-    "-fopenmp"
-)
-# target_compile_options(${eapp_bin} PRIVATE -DSTREAM_ARRAY_SIZE=10000000)
-target_compile_options(${eapp_bin} PRIVATE -DSTREAM_ARRAY_SIZE=1000000)
+target_link_libraries(${eapp_bin} "-static")
+
 # host
 
 add_executable(${host_bin} ${host_src})

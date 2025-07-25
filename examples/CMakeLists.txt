@@ -38,8 +38,9 @@ add_subdirectory(tests)
 add_subdirectory(lenet)
 add_subdirectory(onnx)
 
+# just for test
 add_subdirectory(fileio)
-# add_subdirectory(stream)
+add_subdirectory(hello-cpp)
 
 # iozone
 add_subdirectory(iozone)
@@ -56,3 +57,9 @@ add_subdirectory(sha512)
 
 #coremark
 add_subdirectory(coremark)
+
+#mem
+add_subdirectory(stream)
+add_subdirectory(membench)
+#cc gapbs
+add_subdirectory(cc)

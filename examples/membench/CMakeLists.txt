@@ -1,21 +1,16 @@
-set(eapp_bin stream)
-set(eapp_src eapp/stream.c)
-set(host_bin stream-runner)
+set(eapp_bin membench)
+file(GLOB eapp_src "eapp/*.c" "eapp/engines/*.c" "eapp/src/*.c")
+set(host_bin membench-runner)
 set(host_src host/host.cpp)
-set(package_name "stream.ke")
-set(package_script "./stream-runner stream eyrie-rt loader.bin")
-set(eyrie_plugins "io_syscall linux_syscall env_setup INTERNAL_STRACE DEBUG")
+set(package_name "membench.ke")
+set(package_script "./membench-runner membench eyrie-rt loader.bin")
+set(eyrie_plugins "io_syscall linux_syscall env_setup DEBUG INTERNAL_STRACE")
 
 # eapp
 
 add_executable(${eapp_bin} ${eapp_src})
-target_link_libraries(${eapp_bin}
-    "-static"
-    "-lm"
-    "-fopenmp"
-)
-# target_compile_options(${eapp_bin} PRIVATE -DSTREAM_ARRAY_SIZE=10000000)
-target_compile_options(${eapp_bin} PRIVATE -DSTREAM_ARRAY_SIZE=1000000)
+target_link_libraries(${eapp_bin} "-static")
+
 # host
 
 add_executable(${host_bin} ${host_src})
