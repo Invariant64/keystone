@@ -37,7 +37,7 @@ class KeystoneDevice {
 
   KeystoneDevice();
   virtual ~KeystoneDevice() {}
-  virtual bool initDevice(Params params);
+  virtual bool initDevice();
   virtual Error create(uint64_t minPages);
   virtual uintptr_t initUTM(size_t size);
   virtual Error finalize(
@@ -47,6 +47,7 @@ class KeystoneDevice {
   virtual Error run(uintptr_t* ret);
   virtual Error resume(uintptr_t* ret);
   virtual void* map(uintptr_t addr, size_t size);
+  virtual Error attestSM(unsigned char* hash, unsigned char* publicKey, unsigned char* signature);
 };
 
 class MockKeystoneDevice : public KeystoneDevice {
@@ -57,7 +58,7 @@ class MockKeystoneDevice : public KeystoneDevice {
  public:
   MockKeystoneDevice() {}
   ~MockKeystoneDevice();
-  bool initDevice(Params params);
+  bool initDevice();
   Error create(uint64_t minPages);
   uintptr_t initUTM(size_t size);
   Error finalize(

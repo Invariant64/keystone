@@ -77,6 +77,13 @@ unsigned long sbi_sm_attest_enclave(uintptr_t report, uintptr_t data, uintptr_t 
   return ret;
 }
 
+unsigned long sbi_sm_attest_sm(uintptr_t report)
+{
+  unsigned long ret;
+  ret = attest_sm(report);
+  return ret;
+}
+
 unsigned long sbi_sm_get_sealing_key(uintptr_t sealing_key, uintptr_t key_ident,
                        size_t key_ident_size)
 {

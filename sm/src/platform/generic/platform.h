@@ -25,5 +25,16 @@ struct platform_enclave_data{
 // Initialization functions
 void sm_copy_key(void);
 
+typedef unsigned char byte;
+
+// Sanctum header fields in DRAM
+extern byte sanctum_dev_public_key[32];
+extern byte sanctum_dev_secret_key[64];
+// unsigned int sanctum_sm_size = 0x1ff000;
+extern byte sanctum_sm_hash[64];
+extern byte sanctum_sm_public_key[32];
+extern byte sanctum_sm_secret_key[64];
+extern byte sanctum_sm_signature[64];
+
 #endif // _PLATFORM_H_
 

@@ -35,10 +35,6 @@ OPENSBI_MAKE_ENV += PLATFORM_DIR=$(KEYSTONE_SM_BUILDDIR)/plat/
 
 # For abi issue
 OPENSBI_MAKE_ENV += PLATFORM_RISCV_TOOLCHAIN_DEFAULT=1
-OPENSBI_MAKE_ENV += PLATFORM_RISCV_ABI=lp64d
-OPENSBI_MAKE_ENV += FW_PAYLOAD_PATH=/home/luluji/keystone-omp/build-generic64/buildroot.build/images/Image
-# OPENSBI_MAKE_ENV += FW_PAYLOAD=y
-# OPENSBI_MAKE_ENV += FW_OPTIONS="console=ttyS0 ro root=/dev/vda"
 
 # Make keystone-sm dircleans also trigger opensbi-dirclean
 keystone-sm-dirclean: opensbi-dirclean

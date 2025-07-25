@@ -1,0 +1,35 @@
+{
+  "makefile.configureOnOpen": true,
+  "files.associations": {
+    "epoll.h": "c",
+    "rope": "cpp",
+    "typeindex": "cpp",
+    "variant": "cpp",
+    "bitset": "cpp",
+    "memory": "cpp",
+    "optional": "cpp",
+    "string_view": "cpp",
+    "system_error": "cpp",
+    "string": "cpp",
+    "vector": "cpp",
+    "cmath": "cpp",
+    "linux_wrap.h": "c",
+    "edge_syscall.h": "c",
+    "edge_call.h": "c",
+    "coroutine": "c",
+    "regex": "c",
+    "net_wrap.h": "c",
+    "sendfile.h": "c",
+    "dynamic_bitset": "c"
+  },
+  // 禁用 VSCode 自带 C/C++ 插件的智能提示引擎
+  "C_Cpp.intelliSenseEngine": "disabled",
+
+  // // clangd 设置
+  "clangd.arguments": [
+    "--compile-commands-dir=.",
+    "--background-index",
+    "--header-insertion=never"
+  ],
+  // "clangd.path": "clangd" // 如果你系统中有多个版本，可指定绝对路径
+}

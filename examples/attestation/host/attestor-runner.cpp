@@ -19,6 +19,15 @@
 
 int
 main(int argc, char** argv) {
+  // char buffer[1024];
+  // memset(buffer, 0, sizeof(buffer));
+
+  // // struct sm_report_t report;
+  // for (int i = 0; i < 16; i++) {
+  //   printf("%02x ", buffer[i]);
+  // }
+  // printf("report addr: %p\n", buffer);
+
   if (argc < 4 || argc > 9) {
     printf(
         "Usage: %s <eapp> <runtime> <loader> [--utm-size SIZE(K)] "
