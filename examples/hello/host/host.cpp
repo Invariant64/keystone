@@ -29,21 +29,22 @@ main(int argc, char** argv) {
     printf("Device initialized successfully!\n");
   }
 
-  unsigned char hash[64];
-  unsigned char public_key[32];
-  unsigned char signature[64];
-  int reqmemsize = 1400 * 1024;
-  int respmemsize = 0;
-  int reserved_id = -1;
+  struct RequestParams req;
+  req.reqmemsize = 1400 * 1024;
+  req.respmemsize = 0; // will be set by the driver
+  req.reservedID = -1;
+  req.budget_cycles = 1000000; // Example value, adjust as needed
+  req.period_ticks = 1000; // Example value, adjust as needed
+  req.time_debt_threshold = 100; // Example value, adjust as needed
 
-  enclave.request(hash, public_key, signature, reqmemsize, &respmemsize, &reserved_id);
+  enclave.request(&req);
 
   unsigned char message[96];
-  memcpy(message, hash, 64);
-  memcpy(message + 64, public_key, 32);
+  memcpy(message, req.hash, 64);
+  memcpy(message + 64, req.publicKey, 32);
 
   int sm_valid = ed25519_verify(
-      (const unsigned char*)signature, (const unsigned char*)message,
+      (const unsigned char*)req.signature, (const unsigned char*)message,
       64 + 32, dev_public_key);
   
   if (sm_valid) {
@@ -53,17 +54,20 @@ main(int argc, char** argv) {
     return -1;
   }
 
-  printf("Reserved ID: %d, Response Memory Size: %d\n", reserved_id, respmemsize);
+  printf("Reserved ID: %d, Response Memory Size: %d\n", req.reservedID, req.respmemsize);
 
-  if (reqmemsize != respmemsize) {
+  if (req.reqmemsize != req.respmemsize) {
     printf("Requested memory size (%d) does not match response size (%d)\n",
-           reqmemsize, respmemsize);
+           req.reqmemsize, req.respmemsize);
     return -1;
   }
 
-  params.setFreeMemSize(respmemsize);
+  params.setFreeMemSize(req.respmemsize);
   params.setUntrustedSize(256 * 1024);
-  params.setReservedID(reserved_id);
+  params.setReservedID(req.reservedID);
+  params.setBudgetCycles(req.budget_cycles);
+  params.setPeriodTicks(req.period_ticks);
+  params.setTimeDebtThreshold(req.time_debt_threshold);
 
   if (enclave.init(argv[1], argv[2], argv[3], params) != Error::Success) {
     printf("Failed to initialize enclave!\n");

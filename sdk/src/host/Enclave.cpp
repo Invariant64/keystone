@@ -217,7 +217,9 @@ Enclave::init(
 
   if (pDevice->finalize(
           pMemory->getRuntimePhysAddr(), pMemory->getEappPhysAddr(),
-          pMemory->getFreePhysAddr(), free_memory_size) != Error::Success) {
+          pMemory->getFreePhysAddr(), free_memory_size,
+          params.getBudgetCycles(), params.getPeriodTicks(),
+          params.getTimeDebtThreshold()) != Error::Success) {
     destroy();
     return Error::DeviceError;
   }
@@ -300,9 +302,8 @@ Enclave::registerOcallDispatch(OcallFunc func) {
 }
 
 Error
-Enclave::request(unsigned char* hash, unsigned char* publicKey, unsigned char* signature,
-    int reqmemsize, int* respmemsize, int* reservedID) {
-  return pDevice->request(hash, publicKey, signature, reqmemsize, respmemsize, reservedID);
+Enclave::request(struct RequestParams* params) {
+  return pDevice->request(params);
 }
 
 }  // namespace Keystone

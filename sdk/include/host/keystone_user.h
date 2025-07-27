@@ -53,6 +53,10 @@ struct keystone_ioctl_create_enclave {
   uintptr_t epm_paddr;
   uintptr_t epm_size;
   uintptr_t utm_paddr;
+
+  unsigned long budget_cycles;
+  unsigned long period_ticks;
+  unsigned long time_debt_threshold;
 };
 
 struct keystone_ioctl_run_enclave {
@@ -68,6 +72,9 @@ struct keystone_ioctl_attest_sm {
   int req_mem_size;
   int resp_mem_size;
   int reserved_id;
+  unsigned long budget_cycles;
+  unsigned long period_ticks;
+  unsigned long time_debt_threshold;
 };
 
 #endif

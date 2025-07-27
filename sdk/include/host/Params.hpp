@@ -38,15 +38,39 @@ class Params {
 
   void setUntrustedSize(uint64_t size) { untrusted_size = size; }
   void setFreeMemSize(uint64_t size) { freemem_size = size; }
-  uintptr_t getUntrustedSize() { return untrusted_size; }
-  uintptr_t getFreeMemSize() { return freemem_size; }
   void setReservedID(int id) { reserved_id = id; }
+  void setBudgetCycles(unsigned long cycles) { budget_cycles = cycles; }
+  void setPeriodTicks(unsigned long ticks) { period_ticks = ticks; }
+  void setTimeDebtThreshold(unsigned long threshold) { time_debt_threshold = threshold; }
+
+  uint64_t getUntrustedSize() { return untrusted_size; }
+  uint64_t getFreeMemSize() { return freemem_size; }
   int getReservedID() { return reserved_id; }
+  unsigned long getBudgetCycles() { return budget_cycles; }
+  unsigned long getPeriodTicks() { return period_ticks; }
+  unsigned long getTimeDebtThreshold() { return time_debt_threshold; }
 
  private:
   int reserved_id;
   uint64_t untrusted_size;
   uint64_t freemem_size;
+  unsigned long budget_cycles;
+  unsigned long period_ticks;
+  unsigned long time_debt_threshold;
+};
+
+struct RequestParams {
+  unsigned char hash[64];
+  unsigned char publicKey[32];
+  unsigned char signature[64];
+
+  int reqmemsize;
+  int respmemsize;
+  int reservedID;
+
+  unsigned long budget_cycles;
+  unsigned long period_ticks;
+  unsigned long time_debt_threshold;
 };
 
 }  // namespace Keystone

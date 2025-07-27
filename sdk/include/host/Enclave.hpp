@@ -67,8 +67,7 @@ class Enclave {
   Error run(uintptr_t* ret = nullptr);
   
   Error initDevice();
-  Error request(unsigned char* hash, unsigned char* publicKey, unsigned char* signature,
-      int reqmemsize, int* respmemsize, int* reservedID);
+  Error request(struct RequestParams* params);
 };
 
 uint64_t

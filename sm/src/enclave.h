@@ -13,6 +13,7 @@
 #include "pmp.h"
 #include "thread.h"
 #include <crypto.h>
+#include "schedule.h"
 
 // Special target platform header, set by configure script
 #include TARGET_PLATFORM_HEADER
@@ -75,6 +76,8 @@ struct enclave
   struct thread_state threads[MAX_ENCL_THREADS];
 
   struct platform_enclave_data ped;
+
+  struct schedule_data sched;
 };
 
 /* attestation reports */

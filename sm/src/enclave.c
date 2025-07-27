@@ -421,6 +421,15 @@ unsigned long create_enclave(unsigned long *eidptr, struct keystone_sbi_create_t
   /* EIDs are unsigned int in size, copy via simple copy */
   *eidptr = eid;
 
+  enclaves[eid].sched.ptime = 0;
+  enclaves[eid].sched.etime = 0;
+  enclaves[eid].sched.time_debt = 0;
+  enclaves[eid].sched.budget_cycles = create_args.budget_cycles;
+  enclaves[eid].sched.period_ticks = create_args.period_ticks;
+  enclaves[eid].sched.time_debt_threshold = create_args.time_debt_threshold;
+  sbi_printf("[create enclave] budget_cycles: %lu, period_ticks: %lu, time_debt_threshold: %lu\n",
+             enclaves[eid].sched.budget_cycles, enclaves[eid].sched.period_ticks, enclaves[eid].sched.time_debt_threshold);
+
   spin_unlock(&encl_lock);
   return SBI_ERR_SM_ENCLAVE_SUCCESS;
 
@@ -667,6 +676,9 @@ unsigned long attest_sm(uintptr_t report_ptr)
 
   if (!report)
     return SBI_ERR_SM_ENCLAVE_ILLEGAL_ARGUMENT;
+
+  sbi_printf("Received attest_sm request with budget_cycles: %lu, period_ticks: %lu, time_debt_threshold: %lu\n",
+             report->budget_cycles, report->period_ticks, report->time_debt_threshold);
 
   /* copy SM report */
   sbi_memcpy(report->hash, sm_hash, 64);
