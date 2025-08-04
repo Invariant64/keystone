@@ -32,6 +32,9 @@ KEYSTONE_EXAMPLES_MAKE_OPTS += examples
 define KEYSTONE_EXAMPLES_INSTALL_TARGET_CMDS
 	find $(@D) -name '*.ke' | \
                 xargs -i{} $(INSTALL) -D -m 755 -t $(TARGET_DIR)/usr/share/keystone/examples/ {}
+	$(INSTALL) -D -m 755 $(KEYSTONE_EXAMPLES)/run_stress_tests.sh $(TARGET_DIR)/usr/share/keystone/examples/run_stress_tests.sh
+	# 复制 sysstat 二进制文件从 examples/sysstat/exe/bin 到目标 /usr/bin
+	# $(INSTALL) -D -m 755 $(KEYSTONE_EXAMPLES)/sysstat/exe/bin/* $(TARGET_DIR)/usr/bin
 endef
 
 $(eval $(keystone-package))

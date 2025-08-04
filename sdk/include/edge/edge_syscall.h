@@ -49,6 +49,10 @@ struct _sargs_fd_only {
 typedef struct _sargs_fd_only sargs_SYS_fsync;
 typedef struct _sargs_fd_only sargs_SYS_close;
 
+typedef struct sargs_SYS_dup {
+  int oldfd;
+} sargs_SYS_dup;
+
 typedef struct sargs_SYS_lseek {
   int fd;
   off_t offset;
@@ -109,6 +113,12 @@ typedef struct sargs_SYS_fcntl {
   int has_struct;
   unsigned long arg[];
 } sargs_SYS_fcntl;
+
+typedef struct sargs_SYS_ioctl {
+  int fd;
+  unsigned long request;
+  uintptr_t arg;
+} sargs_SYS_ioctl;
 
 typedef struct sargs_SYS_getcwd {
   size_t size;

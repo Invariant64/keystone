@@ -1,40 +1,55 @@
-1. Setup Keystone as the [documentation](https://docs.keystone-enclave.org/en/latest/Getting-Started/Running-Keystone-with-QEMU.html) describes.
+1. Move examples to your keystone directory
 
-2. Download Musl cross compiler at [https://musl.cc/riscv64-linux-musl-cross.tgz](https://musl.cc/riscv64-linux-musl-cross.tgz). Set the MUSL_CROSS_TOOLCHAIN_PATH variable in examples/TH/toolchain-riscv64.cmake to the path where you extracted the musl cross compiler.
-
-3. Build TH Library:
+2. Build keystone examples
 ```bash
-cd examples/lenet/TH
-mkdir build
-cd build
-cmake .. -DCMAKE_TOOLCHAIN_FILE=../toolchain-riscv64.cmake
-make -j
+make -j$(nproc)
+```
+3. run keystone
+```bash
+make run
 ```
 
-4. Build lapack Library (TH Library use it)
+4. copy run_stress_tests.sh to your keystone directory
 ```bash
-cd examples/lenet/lapack-3.12.1/
-mkdir build
-cd build
-cmake .. -DCMAKE_TOOLCHAIN_FILE=../toolchain-riscv64.cmake
-make -j
+scp -P 9821 -r examples/run_stress_tests.sh root@localhost:/usr/share/keystone/examples
 ```
 
-5. Configue toolchain support OpenMP
-```bash
-make buildroot-configure
-```
-Choose：
-Toolchain  --->
- [*] Enable compiler OpenMP support
+5. run stress tests
 
-6. Rebuild the whole keystone to rebuild toolchain (still don't known how to precisely rebuild toolchain)
-Delete some build file(like build-generic64/buildroot.build/host) or clone new keystone
+I use the following commands to run stress tests:
 ```bash
-make -j
+./run_stress_tests.sh --cpu --mode iozone.ke
+./run_stress_tests.sh --hdd --mode iozone.ke
+./run_stress_tests.sh --cpu --mode dhrystone.ke
+./run_stress_tests.sh --hdd --mode dhrystone.ke
 ```
 
-7. Build Keystone example:
+In one command it is:
 ```bash
-BUILDROOT_TARGET=keystone-examples make -j
+./run_stress_tests.sh --cpu --hdd --mode iozone.ke --mode dhrystone.ke
+```
+
+6. see the results in the results directory
+```bash
+scp -P 9821 -r root@localhost:/usr/share/keystone/examples/stress_results/ examples/
+```
+
+7. plot the results
+```bash
+cd examples
+python3 plot_results.py
+```
+
+8. use sysstat to see the burdern of cpu
+```bash
+cd examples/sysstat
+
+# look README.MD to compile sysstat
+
+# copy sysstat to your keystone directory
+scp -P 9821 -r examples/sysstat/exe/bin/* root@localhost:/usr/bin
+
+# run sysstat
+#open another terminal
+mpstat -P ALL 5 1
 ```

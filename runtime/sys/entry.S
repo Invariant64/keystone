@@ -135,10 +135,14 @@ encl_trap_handler:
 /* TODO we may want to explicitly disable the FPU here ala linux */
 
   csrrw sp, sscratch, sp
+
+  # sp=sscratch为0来自内核态，现在都是通过 sstatus.SPP 来判断之前是处于哪个特权级
+  # sscratch是内核的栈顶
   bnez sp, __save_context
   /* if trap is from kernel, restore sp */
   csrr sp, sscratch
 
+  # 如果 sp (刚刚被赋值为旧的 sscratch 值) 不为零，则表示陷阱来自用户应用程序
 __save_context:
   /* save previous context */
   SAVE_ALL_BUT_SP
@@ -156,7 +160,7 @@ __save_context:
   STORE t0, 33*REGBYTES(sp)
 
   csrr s2, scause
-
+  # 复数不跳转
   bge s2, zero, 1f
 
   /* handle interrupts */

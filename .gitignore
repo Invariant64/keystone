@@ -7,5 +7,7 @@ riscv64/
 riscv32/
 
 *.Identifier
-compile_commands*
+compile_commands.json
 *.cache
+
+test/

@@ -226,31 +226,40 @@ void paging_handle_page_fault(struct encl_ctx* ctx)
   addr = ctx->sbadaddr;
 
   /* VA legitimacy check */
-  if (addr >= EYRIE_LOAD_START)
+  if (addr >= EYRIE_LOAD_START){
+    printf("addr is not in EYRIE_LOAD_START\n");
     goto exit;
+  }
 
   entry = pte_of_va(addr);
 
   /* VA is never mapped, exit */
-  if (!entry)
+  if (!entry){
+    printf("entry is null\n");
     goto exit;
+  }
 
   /* if PTE is already valid, it means something went wrong */
-  if (*entry & PTE_V)
+  if (*entry & PTE_V){
+    printf("entry is valid\n");
     goto exit;
-
+  }
   /* where is the page? */
   back_ptr = __paging_va(pte_ppn(*entry) << RISCV_PAGE_BITS);
-  if (!back_ptr)
+  if (!back_ptr){
+    printf("back_ptr is null\n");
     goto exit;
+  }
 
   assert(back_ptr >= paging_backing_storage_addr);
   assert(back_ptr < paging_backing_storage_addr + paging_backing_storage_size);
 
   /* evict & swap */
   frame = paging_evict_and_free_one(back_ptr);
-  if (!frame)
+  if (!frame){
+    printf("frame is null\n");
     goto exit;
+  }
 
   assert(*entry & PTE_U);
   /* validate the entry */

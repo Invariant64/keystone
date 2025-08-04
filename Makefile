@@ -150,12 +150,12 @@ OPENSBI_TAR = $(KEYSTONE)/v1.1.tar.gz
 
 clean-all:
 	$(call log,info,Cleaning all buildroot directories)
-	rm -rf $(KEYSTONE_BUILDROOT)/buildroot.build/per-package/keystone*
-	rm -rf $(KEYSTONE_BUILDROOT)/buildroot.build/build/keystone*
-	rm -rf $(KEYSTONE_BUILDROOT)/buildroot.build/per-package/opensbi*
-	rm -rf $(KEYSTONE_BUILDROOT)/buildroot.build/build/opensbi*
-	rm -rf $(KEYSTONE_BUILDROOT)/buildroot.build/per-package/host-keystone-sdk*
-	rm -rf $(KEYSTONE_BUILDROOT)/buildroot.build/build/host-keystone-sdk*
+	rm -rf ${BUILDROOT_BUILDDIR}/per-package/keystone*
+	rm -rf ${BUILDROOT_BUILDDIR}/build/keystone*
+	rm -rf ${BUILDROOT_BUILDDIR}/per-package/opensbi*
+	rm -rf ${BUILDROOT_BUILDDIR}/build/opensbi*
+	rm -rf ${BUILDROOT_BUILDDIR}/per-package/host-keystone-sdk*
+	rm -rf ${BUILDROOT_BUILDDIR}/build/host-keystone-sdk*
 	rm -rf $(KEYSTONE_BUILDROOT)/dl/opensbi/
 	rm -rf $(OPENSBI_TAR)
 

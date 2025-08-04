@@ -1,157 +1,70 @@
-#!/usr/bin/env python3
-import os
+#!/usr/bin/python3
+
 import json
-import shutil
-import subprocess
-from pathlib import Path
+import os
 import re
-import sys
 
-# 当前工作目录作为根路径
-SOURCE_DIR = Path.cwd()
-BUILDROOT_BUILD_DIR = SOURCE_DIR / "build-generic64" / "buildroot.build"
-FINAL_DB = SOURCE_DIR / "compile_commands.json"
-
-# Bear 拦截的 Buildroot 模块
-BEAR_MODULES = [
-    "host-keystone-sdk",     # 必须最先构建
-    "keystone-driver",       # 提供 keystone 设备接口
-    "keystone-sm",           # sm 依赖 driver，也可能引用 sdk
-    "keystone-runtime",      # runtime 依赖 sdk 和 sm
-    "keystone-examples",     # examples 依赖 runtime、sm 和 sdk
-]
-# 映射构建产物路径 -> 源代码路径
-MODULE_REMAP = {
-    "keystone-examples": "examples",
-    "keystone-runtime": "runtime",
-    "keystone-sm": "sm",
-    "keystone-driver": "linux-keystone-driver",
-    "opensbi": "opensbi",
-    "host-keystone-sdk": "sdk",
+# 模块替换规则，键是模块名，值是源码目录路径
+module_map = {
+    "keystone-sm": "/home/noah/tee-exp/keystone/sm",
+    "keystone-runtime": "/home/noah/tee-exp/keystone/runtime",
+    "keystone-driver": "/home/noah/tee-exp/keystone/linux-keystone-driver",
+    "keystone-examples": "/home/noah/tee-exp/keystone/examples",
+    "host-keystone-sdk": "/home/noah/tee-exp/keystone/sdk",
+    "opensbi-custom": "/home/noah/tee-exp/keystone/opensbi-1.1",
 }
 
-def run(cmd, cwd=None):
-    print(f"\n▶️ 执行: {cmd}")
-    subprocess.run(cmd, shell=True, cwd=cwd, check=True)
+# 构建目录前缀（路径前半段）
+build_root = "/home/noah/tee-exp/keystone/build-generic64/buildroot.build/build"
 
-def build_with_bear(module):
-    print(f"\n🔁 使用 bear 构建模块: {module}")
-    run(f"BUILDROOT_TARGET={module}-dirclean make -j", cwd=SOURCE_DIR)
-    run(f"bear -- make -j BUILDROOT_TARGET={module}", cwd=SOURCE_DIR)
-    shutil.move("compile_commands.json", f"compile_commands_{module}.json")
+# 匹配形如 keystone-sm-xxxxx 的路径
+pattern = re.compile(rf"{re.escape(build_root)}/(?P<modname>[^/]+?)-[0-9a-f]+(/|$)")
+# opensbi 没有哈希目录，直接匹配
+pattern_opensbi = re.compile(rf"{re.escape(build_root)}/opensbi-custom(/|$)")
 
-def generate_sdk_compile_commands():
-    print("\n📦 生成 SDK 的伪编译命令")
-    sdk_dir = SOURCE_DIR / "sdk"
-    cpp_files = list((sdk_dir / "src").rglob("*.cpp"))
-    entries = []
+def replace_path(path):
+    match = pattern_opensbi.search(path)
+    if match:
+        # 如果是 opensbi-custom 的路径，直接替换为对应的源码路径
+        return os.path.join(module_map["opensbi-custom"], path[match.end():].lstrip("/"))
 
-    for f in cpp_files:
-        entries.append({
-            "directory": str(sdk_dir),
-            "file": str(f),
-            "arguments": [
-                "riscv64-unknown-linux-gnu-g++",
-                "-I", str(sdk_dir / "include"),
-                "-I", str(sdk_dir / "src"),
-                "-std=c++17",
-                "-c", str(f),
-                "-o", "/dev/null"
-            ]
-        })
+    match = pattern.search(path)
+    if not match:
+        return path
 
-    with open("compile_commands_sdk.json", "w") as f:
-        json.dump(entries, f, indent=2)
-    print(f"✅ 写入 compile_commands_sdk.json（共 {len(entries)} 项）")
+    mod_key = match.group("modname")
+    new_base = module_map.get(mod_key)
+    if not new_base:
+        return path
 
-def build_sdk_with_bear():
-    print("\n📦 用 bear 构建 SDK")
-    sdk_dir = SOURCE_DIR / "sdk"
-    build_dir = sdk_dir / "build"
-    os.makedirs(build_dir, exist_ok=True)
-    cpp_files = list((sdk_dir / "src").rglob("*.cpp"))
-    cmds = [
-        f"riscv64-linux-gnu-g++ -I../include -I../src -std=c++17 -c {cpp} -o {build_dir/cpp.name}.o"
-        for cpp in cpp_files
-    ]
-    script_path = sdk_dir / "build_sdk.sh"
-    with open(script_path, "w") as f:
-        f.write("#!/bin/bash\nset -e\n" + "\n".join(cmds))
-    script_path.chmod(0o755)
-    run(f"bear -- {script_path}", cwd=sdk_dir)
-    shutil.move(sdk_dir / "compile_commands.json", "compile_commands_sdk.json")
+    # 将匹配到的 build 前缀和模块名部分替换为新的源码路径
+    suffix = path[match.end():]  # 剩下的路径部分（哈希目录之后）
+    return os.path.join(new_base, suffix.lstrip("/"))
 
+def process_entry(entry):
+    for key in ["file", "directory", "output"]:
+        if key in entry:
+            entry[key] = replace_path(entry[key])
 
-def map_to_source(file_path: Path):
-    try:
-        relative = file_path.relative_to(BUILDROOT_BUILD_DIR)
-        parts = list(relative.parts)
+    if "arguments" in entry:
+        entry["arguments"] = [replace_path(arg) for arg in entry["arguments"]]
+    if "command" in entry:
+        entry["command"] = replace_path(entry["command"])
 
-        # Buildroot 构建路径通常是 build/<module-hash>/
-        if len(parts) > 1:
-            match = re.match(r"(keystone-[a-z]+|opensbi)-[a-f0-9]+", parts[1])
-            if match:
-                module_prefix = match.group(1)
-                if module_prefix in MODULE_REMAP:
-                    parts[1] = MODULE_REMAP[module_prefix]
-                    parts.pop(0)  # 移除 build/
-                    new_path = SOURCE_DIR.joinpath(*parts)
-                    if new_path.exists():
-                        print(f"🔄 修复路径: {file_path} -> {new_path}")
-                        return new_path
+    return entry
 
-        # SDK头文件路径修复（per-package）
-        if "per-package" in parts and "sdk" in parts:
-            idx = parts.index("sdk")
-            new_path = SOURCE_DIR / "sdk" / "include" / Path(*parts[idx + 1:])
-            if new_path.exists():
-                print(f"📦 SDK头文件映射: {file_path} -> {new_path}")
-                return new_path
+def process_compile_commands(input_path, output_path=None):
+    with open(input_path, 'r') as f:
+        data = json.load(f)
 
-    except ValueError:
-        pass
-    return None
+    new_data = [process_entry(entry) for entry in data]
 
+    out_path = output_path if output_path else input_path
+    with open(out_path, 'w') as f:
+        json.dump(new_data, f, indent=2)
 
-def fix_arguments(args):
-    fixed_args = []
-    for arg in args:
-        if isinstance(arg, str) and "sdk/include" in arg and "per-package" in arg:
-            real_sdk_path = str(SOURCE_DIR / "sdk" / "include")
-            print(f"📁 替换 -I 路径: {arg} -> -I{real_sdk_path}")
-            fixed_args.append("-I" + real_sdk_path)
-        else:
-            fixed_args.append(arg)
-    return fixed_args
+    print(f"Updated compile_commands.json saved to: {out_path}")
 
-def merge_and_fix():
-    print("\n🔧 合并所有 compile_commands 并修复路径")
-    all_entries = []
-    for file in Path(".").glob("compile_commands_*.json"):
-        with open(file) as f:
-            all_entries += json.load(f)
-
-    new_entries = []
-    for entry in all_entries:
-        orig_file = Path(entry["file"])
-        new_file = map_to_source(orig_file) or orig_file
-        entry["file"] = str(new_file)
-        entry["directory"] = str(SOURCE_DIR)
-
-        if "arguments" in entry:
-            entry["arguments"] = fix_arguments(entry["arguments"])
-
-        new_entries.append(entry)
-
-    FINAL_DB.parent.mkdir(parents=True, exist_ok=True)
-    with open(FINAL_DB, "w") as f:
-        json.dump(new_entries, f, indent=2)
-    print(f"\n✅ 已生成: {FINAL_DB}")
-
-
+# 使用示例
 if __name__ == "__main__":
-    for module in BEAR_MODULES:
-        build_with_bear(module)
-    # build_sdk_with_bear()
-    # generate_sdk_compile_commands()
-    merge_and_fix()
+    process_compile_commands("compile_commands.json")

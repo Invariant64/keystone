@@ -2,6 +2,8 @@
 #include <unistd.h>
 #include <time.h>
 
+static int a = 1;
+
 int main()
 {
   printf("hello, world!\n");

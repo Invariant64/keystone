@@ -16,14 +16,23 @@
 
 #define CLOCK_FREQ 1000000000
 
+#define TIME_FREQ 1000000UL
+
 //TODO we should check which clock this is
 uintptr_t linux_clock_gettime(__clockid_t clock, struct timespec *tp){
-  print_strace("[runtime] clock_gettime not fully supported (clock %x, assuming)\r\n", clock);
-  unsigned long cycles;
-  __asm__ __volatile__("rdcycle %0" : "=r"(cycles));
+  // print_strace("[runtime] clock_gettime not fully supported (clock %x, assuming)\r\n", clock);
+  // unsigned long cycles;
+  // __asm__ __volatile__("rdcycle %0" : "=r"(cycles));
 
-  unsigned long sec = cycles / CLOCK_FREQ;
-  unsigned long nsec = (cycles % CLOCK_FREQ);
+  // unsigned long sec = cycles / CLOCK_FREQ;
+  // unsigned long nsec = (cycles % CLOCK_FREQ);
+
+  // use rdtime to get time in qemu
+  unsigned long time;
+__asm__ __volatile__("rdtime %0" : "=r"(time));
+
+  unsigned long sec = time / TIME_FREQ;
+  unsigned long nsec = (time % TIME_FREQ) * (1000000000UL / TIME_FREQ);
 
   copy_to_user(&(tp->tv_sec), &sec, sizeof(unsigned long));
   copy_to_user(&(tp->tv_nsec), &nsec, sizeof(unsigned long));
