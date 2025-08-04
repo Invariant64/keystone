@@ -17,7 +17,7 @@ int keystone_create_enclave(struct file *filep, unsigned long arg)
   struct keystone_ioctl_create_enclave *enclp = (struct keystone_ioctl_create_enclave *) arg;
 
   struct enclave *enclave;
-  enclave = create_enclave(enclp->min_pages);
+  enclave = create_enclave(enclp->min_pages, enclp->reserved_id);
 
   if (enclave == NULL) {
     return -ENOMEM;
@@ -72,6 +72,9 @@ int keystone_finalize_enclave(unsigned long arg)
   create_args.user_paddr = enclp->user_paddr;
   create_args.free_paddr = enclp->free_paddr;
   create_args.free_requested = enclp->free_requested;
+  create_args.budget_cycles = enclp->budget_cycles;
+  create_args.period_ticks = enclp->period_ticks;
+  create_args.time_debt_threshold = enclp->time_debt_threshold;
 
   ret = sbi_sm_create_enclave(&create_args);
 
@@ -238,13 +241,24 @@ int keystone_attest_sm(unsigned long data)
 
   struct keystone_ioctl_attest_sm* arg = (struct keystone_ioctl_attest_sm*) data;
 
-  keystone_info("keystone_attest_sm: Attesting Secure Monitor\n");
+  arg->reserved_id = reserved_id_alloc();
+  if (arg->reserved_id < 0) {
+    keystone_err("keystone_attest_sm: Failed to allocate reserved ID\n");
+    return -EINVAL;
+  }
 
+  keystone_info("keystone_attest_sm: Attesting Secure Monitor and Requesting CPU Resources\n");
+
+  sm_report->reserved_id = arg->reserved_id;
+  sm_report->budget_cycles = arg->budget_cycles;
+  sm_report->period_ticks = arg->period_ticks;
+  sm_report->time_debt_threshold = arg->time_debt_threshold;
   ret = sbi_sm_attest_sm((unsigned long)__pa(sm_report));
 
   if (ret.error) {
     keystone_err("keystone_attest_sm: SBI call failed with error code %ld\n", ret.error);
     kfree(sm_report);
+    reserved_release(arg->reserved_id);
     return -EINVAL;
   }
 
@@ -257,6 +271,8 @@ int keystone_attest_sm(unsigned long data)
   keystone_info("keystone_attest_sm: Attestation report copied to driver space\n");
 
   kfree(sm_report);
+
+  arg->resp_mem_size = reserved_memory_alloc(arg->reserved_id, arg->req_mem_size);
 
   return 0;
 }

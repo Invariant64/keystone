@@ -38,16 +38,17 @@ class KeystoneDevice {
   KeystoneDevice();
   virtual ~KeystoneDevice() {}
   virtual bool initDevice();
-  virtual Error create(uint64_t minPages);
+  virtual Error create(uint64_t minPages, int reservedID);
   virtual uintptr_t initUTM(size_t size);
   virtual Error finalize(
       uintptr_t runtimePhysAddr, uintptr_t eappPhysAddr, uintptr_t freePhysAddr,
-      uintptr_t freeRequested);
+      uintptr_t freeRequested, uint64_t budgetCycles, uint64_t periodTicks,
+      uint64_t timeDebtThreshold);
   virtual Error destroy();
   virtual Error run(uintptr_t* ret);
   virtual Error resume(uintptr_t* ret);
   virtual void* map(uintptr_t addr, size_t size);
-  virtual Error attestSM(unsigned char* hash, unsigned char* publicKey, unsigned char* signature);
+  virtual Error request(struct RequestParams* params);
 };
 
 class MockKeystoneDevice : public KeystoneDevice {

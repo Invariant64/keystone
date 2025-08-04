@@ -18,6 +18,7 @@ export KEYSTONE_RUNTIME         ?= $(KEYSTONE)/runtime
 export KEYSTONE_SDK             ?= $(KEYSTONE)/sdk
 export KEYSTONE_BOOTROM         ?= $(KEYSTONE)/bootrom
 export KEYSTONE_SM              ?= $(KEYSTONE)/sm
+export KEYSTONE_OPENSBI				  ?= $(KEYSTONE)/opensbi-1.1
 
 export BUILDDIR                 ?= $(KEYSTONE)/build-$(KEYSTONE_PLATFORM)$(KEYSTONE_BITS)
 export BUILDROOT_OVERLAYDIR     ?= $(BUILDDIR)/overlay
@@ -144,3 +145,21 @@ call:
 		-o ConnectTimeout=5 \
 		$(PORT_ARGS) root@$(IP_ARGS) $(KEYSTONE_COMMAND) 2>&1 | \
 		 grep -v "Warning: Permanently added" | tee -a $(CALL_LOGFILE)
+
+OPENSBI_TAR = $(KEYSTONE)/v1.1.tar.gz
+
+clean-all:
+	$(call log,info,Cleaning all buildroot directories)
+	rm -rf $(KEYSTONE_BUILDROOT)/buildroot.build/per-package/keystone*
+	rm -rf $(KEYSTONE_BUILDROOT)/buildroot.build/build/keystone*
+	rm -rf $(KEYSTONE_BUILDROOT)/buildroot.build/per-package/opensbi*
+	rm -rf $(KEYSTONE_BUILDROOT)/buildroot.build/build/opensbi*
+	rm -rf $(KEYSTONE_BUILDROOT)/buildroot.build/per-package/host-keystone-sdk*
+	rm -rf $(KEYSTONE_BUILDROOT)/buildroot.build/build/host-keystone-sdk*
+	rm -rf $(KEYSTONE_BUILDROOT)/dl/opensbi/
+	rm -rf $(OPENSBI_TAR)
+
+rebuild:
+	$(call log,info,Building Keystone)
+	tar -czf $(OPENSBI_TAR) -C $(KEYSTONE_OPENSBI) .
+	$(MAKE) buildroot -j20

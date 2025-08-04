@@ -4,7 +4,7 @@
 
 # General headers
 keystone-sm-headers += sm_assert.h cpu.h enclave.h ipi.h mprv.h page.h platform-hook.h \
-                        pmp.h safe_math_util.h sm.h sm-sbi.h sm-sbi-opensbi.h thread.h
+                        pmp.h safe_math_util.h sm.h sm-sbi.h sm-sbi-opensbi.h thread.h schedule.h
 
 # Crypto headers
 ifneq ($(KEYSTONE_SM_NO_CRYPTO),y)
@@ -35,7 +35,7 @@ keystone-sm-headers += plugins/multimem.h plugins/plugins.h
 
 # Core files
 keystone-sm-sources += attest.c cpu.c enclave.c pmp.c sm.c sm-sbi.c sm-sbi-opensbi.c \
-                        thread.c mprv.c sbi_trap_hack.c trap.c ipi.c bootloader.c
+                        thread.c mprv.c sbi_trap_hack.c trap.c ipi.c schedule.c
 
 # Crypto
 ifneq ($(KEYSTONE_SM_NO_CRYPTO),y)

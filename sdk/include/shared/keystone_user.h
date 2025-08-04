@@ -41,6 +41,7 @@ struct keystone_ioctl_create_enclave {
   // host -> driver
   uintptr_t min_pages; // create
   uintptr_t utm_size; // utm_init
+  int reserved_id; // request
 
   // host -> driver // finalize
   uintptr_t runtime_paddr;
@@ -52,6 +53,10 @@ struct keystone_ioctl_create_enclave {
   uintptr_t epm_paddr;
   uintptr_t epm_size;
   uintptr_t utm_paddr;
+
+  unsigned long budget_cycles;
+  unsigned long period_ticks;
+  unsigned long time_debt_threshold;
 };
 
 struct keystone_ioctl_run_enclave {
@@ -64,6 +69,12 @@ struct keystone_ioctl_attest_sm {
   unsigned char hash[64];
   unsigned char public_key[32];
   unsigned char signature[64];
+  int req_mem_size;
+  int resp_mem_size;
+  int reserved_id;
+  unsigned long budget_cycles; // request
+  unsigned long period_ticks; // request
+  unsigned long time_debt_threshold; // request
 };
 
 #endif

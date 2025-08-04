@@ -65,12 +65,24 @@ struct keystone_sbi_create_t {
   uintptr_t user_paddr;
   uintptr_t free_paddr;
   uintptr_t free_requested;
+
+  unsigned long budget_cycles;
+  unsigned long period_ticks;
+  unsigned long time_debt_threshold;
 };
 
 struct keystone_sbi_attest_sm_t {
   unsigned char hash[64];
   unsigned char public_key[32];
   unsigned char signature[64];
+
+  int req_mem_size;
+  int resp_mem_size;
+  int reserved_id;
+
+  unsigned long budget_cycles;
+  unsigned long period_ticks;
+  unsigned long time_debt_threshold;
 };
 
 #endif  // __SM_CALL_H__

@@ -51,7 +51,7 @@ calculate_required_pages(ElfFile** elfFiles, size_t numElfFiles) {
 }
 
 bool
-Enclave::prepareEnclaveMemory(size_t requiredPages, uintptr_t alternatePhysAddr) {
+Enclave::prepareEnclaveMemory(size_t requiredPages, uintptr_t alternatePhysAddr, int reservedID) {
   // FIXME: this will be deprecated with complete freemem support.
   // We just add freemem size for now.
   uint64_t minPages;
@@ -59,7 +59,7 @@ Enclave::prepareEnclaveMemory(size_t requiredPages, uintptr_t alternatePhysAddr)
   minPages += requiredPages;
 
   /* Call Enclave Driver */
-  if (pDevice->create(minPages) != Error::Success) {
+  if (pDevice->create(minPages, reservedID) != Error::Success) {
     return false;
   }
 
@@ -180,9 +180,10 @@ Enclave::init(
   }
 
   ElfFile* elfFiles[3] = {enclaveFile, runtimeFile, loaderFile};
-  size_t requiredPages = calculate_required_pages(elfFiles, 3);
+  size_t requiredPages = calculate_required_pages(elfFiles, 3); // need to modify
 
-  if (!prepareEnclaveMemory(requiredPages, alternatePhysAddr)) {
+
+  if (!prepareEnclaveMemory(requiredPages, alternatePhysAddr, params.getReservedID())) {
     destroy();
     return Error::DeviceError;
   }
@@ -203,9 +204,22 @@ Enclave::init(
 
   pMemory->startFreeMem();
 
+  uint64_t total_size = enclaveFile->getFileSize() + runtimeFile->getFileSize() +
+      loaderFile->getFileSize();
+
+  if (total_size > params.getFreeMemSize()) {
+    ERROR("All binaries are too large to fit in enclave memory");
+    destroy();
+    return Error::DeviceError;
+  }
+
+  uintptr_t free_memory_size = params.getFreeMemSize() - total_size;
+
   if (pDevice->finalize(
           pMemory->getRuntimePhysAddr(), pMemory->getEappPhysAddr(),
-          pMemory->getFreePhysAddr(), params.getFreeMemSize()) != Error::Success) {
+          pMemory->getFreePhysAddr(), free_memory_size,
+          params.getBudgetCycles(), params.getPeriodTicks(),
+          params.getTimeDebtThreshold()) != Error::Success) {
     destroy();
     return Error::DeviceError;
   }
@@ -288,8 +302,8 @@ Enclave::registerOcallDispatch(OcallFunc func) {
 }
 
 Error
-Enclave::attestSM(unsigned char* hash, unsigned char* publicKey, unsigned char* signature) {
-  return pDevice->attestSM(hash, publicKey, signature);
+Enclave::request(struct RequestParams* params) {
+  return pDevice->request(params);
 }
 
 }  // namespace Keystone

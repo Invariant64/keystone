@@ -36,9 +36,10 @@ int destroy_enclave(struct enclave* enclave)
   return 0;
 }
 
-struct enclave* create_enclave(unsigned long min_pages)
+struct enclave* create_enclave(unsigned long min_pages, int reserved_id)
 {
   struct enclave* enclave;
+  struct keystone_reserved* reserved;
 
   enclave = kmalloc(sizeof(struct enclave), GFP_KERNEL);
   if (!enclave){
@@ -50,18 +51,33 @@ struct enclave* create_enclave(unsigned long min_pages)
   enclave->utm = NULL;
   enclave->close_on_pexit = 1;
 
-  enclave->epm = kmalloc(sizeof(struct epm), GFP_KERNEL);
-  enclave->is_init = true;
-  if (!enclave->epm)
-  {
-    keystone_err("failed to allocate epm\n");
-    goto error_destroy_enclave;
+  reserved = get_reserved_by_id(reserved_id);
+
+  if (reserved != NULL) {
+    enclave->epm = reserved->epm;
+    if (!enclave->epm) {
+      keystone_err("failed to get reserved epm\n");
+      goto error_destroy_enclave;
+    }
+    keystone_info("using reserved epm %d\n", reserved_id);
+    reserved_release(reserved_id);
+  }
+  else {
+    enclave->epm = kmalloc(sizeof(struct epm), GFP_KERNEL);
+
+    if (!enclave->epm) {
+      keystone_err("failed to allocate epm\n");
+      goto error_destroy_enclave;
+    }
+
+    if(epm_init(enclave->epm, min_pages)) {
+      keystone_err("failed to initialize epm\n");
+      goto error_destroy_enclave;
+    }
   }
 
-  if(epm_init(enclave->epm, min_pages)) {
-    keystone_err("failed to initialize epm\n");
-    goto error_destroy_enclave;
-  }
+  enclave->is_init = true;
+
   return enclave;
 
  error_destroy_enclave:

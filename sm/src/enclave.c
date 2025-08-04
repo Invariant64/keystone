@@ -12,6 +12,9 @@
 #include <sbi/riscv_asm.h>
 #include <sbi/riscv_locks.h>
 #include <sbi/sbi_console.h>
+#include <limits.h>
+#include <sbi_utils/timer/aclint_mtimer.h>
+#include "schedule.h"
 
 struct enclave enclaves[ENCL_MAX];
 
@@ -47,7 +50,7 @@ static inline void context_switch_to_enclave(struct sbi_trap_regs* regs,
   swap_prev_mepc(&enclaves[eid].threads[0], regs, regs->mepc);
   swap_prev_mstatus(&enclaves[eid].threads[0], regs, regs->mstatus);
 
-  uintptr_t interrupts = 0;
+  uintptr_t interrupts = MIP_STIP;
   csr_write(mideleg, interrupts);
 
   if(load_parameters) {
@@ -421,6 +424,15 @@ unsigned long create_enclave(unsigned long *eidptr, struct keystone_sbi_create_t
   /* EIDs are unsigned int in size, copy via simple copy */
   *eidptr = eid;
 
+  enclaves[eid].sched.ptime = 0;
+  enclaves[eid].sched.etime = 0;
+  enclaves[eid].sched.time_debt = 0;
+  enclaves[eid].sched.budget_cycles = create_args.budget_cycles;
+  enclaves[eid].sched.period_ticks = create_args.period_ticks;
+  enclaves[eid].sched.time_debt_threshold = create_args.time_debt_threshold;
+  sbi_printf("[create enclave] budget_cycles: %lu, period_ticks: %lu, time_debt_threshold: %lu\n",
+             enclaves[eid].sched.budget_cycles, enclaves[eid].sched.period_ticks, enclaves[eid].sched.time_debt_threshold);
+
   spin_unlock(&encl_lock);
   return SBI_ERR_SM_ENCLAVE_SUCCESS;
 
@@ -668,6 +680,9 @@ unsigned long attest_sm(uintptr_t report_ptr)
   if (!report)
     return SBI_ERR_SM_ENCLAVE_ILLEGAL_ARGUMENT;
 
+  sbi_printf("Received attest_sm request with budget_cycles: %lu, period_ticks: %lu, time_debt_threshold: %lu\n",
+             report->budget_cycles, report->period_ticks, report->time_debt_threshold);
+
   /* copy SM report */
   sbi_memcpy(report->hash, sm_hash, 64);
   sbi_memcpy(report->public_key, sm_public_key, 32);
@@ -694,4 +709,100 @@ unsigned long get_sealing_key(uintptr_t sealing_key, uintptr_t key_ident,
           SEALING_KEY_SIZE);
 
   return SBI_ERR_SM_ENCLAVE_SUCCESS;
+}
+
+void record_enclave_time(enclave_id eid, bool is_start)
+{
+  unsigned long current_ptime = read_mtime();
+  unsigned long current_etime = csr_read(mcycle);
+
+  if (is_start) {
+    enclaves[eid].sched.etime_start = current_etime;
+    if (enclaves[eid].sched.ptime_start == 0) {
+      // ONLY If ptime_start is not set, set it to current time
+      enclaves[eid].sched.ptime_start = current_ptime;
+    }
+    // sbi_printf("[record_enclave_time] eid: %u, etime_start: %lu, ptime_start: %lu\n",
+    //        eid, enclaves[eid].sched.etime_start, enclaves[eid].sched.ptime_start);
+  } else {
+    unsigned long elapsed_etime = current_etime - enclaves[eid].sched.etime_start;
+    // unsigned long elapsed_ptime = current_ptime - enclaves[eid].sched.ptime_start;
+    enclaves[eid].sched.etime += elapsed_etime;
+    enclaves[eid].sched.ptime = current_ptime - enclaves[eid].sched.ptime_start;
+
+    // sbi_printf("[record_enclave_time] eid: %u, elapsed_etime: %lu, elapsed_ptime: %lu, total_etime: %lu, total_ptime: %lu\n",
+    //        eid, elapsed_etime, elapsed_ptime,
+    //        enclaves[eid].sched.etime, enclaves[eid].sched.ptime);
+  }
+}
+
+void update_mtimecmp(void)
+{
+  enclave_id eid;
+  unsigned long next_interrupt = ULONG_MAX;
+  int next_interrupt_enclave = -1;
+
+  // Before update_mtimecmp() is called, last running enclave's
+  // ptime_interrupt is updated, so here we just need to find the minimum
+  // ptime_interrupt among all enclaves (including the stopped ones).
+
+  // Fastest implementation to find the minimum is using a heap, but here
+  // we just iterate through all enclaves. This is not a performance 
+  // critical code, so it is OK to iterate through all enclaves every time.
+  for (eid = 0; eid < ENCL_MAX; eid++) {
+    if (ENCLAVE_EXISTS(eid) && enclaves[eid].sched.ptime_interrupt > 0 &&
+        enclaves[eid].sched.ptime_interrupt < next_interrupt) {
+      next_interrupt = enclaves[eid].sched.ptime_interrupt;
+      next_interrupt_enclave = eid;
+    }
+  }
+
+  if (next_interrupt != ULONG_MAX) {
+    write_mtimecmp(next_interrupt);
+    csr_set(CSR_MIE, MIP_MTIP);
+  } else {
+    write_mtimecmp(ULONG_MAX); // Disable timer interrupt
+  }
+  set_next_interrupt_encl_id(next_interrupt_enclave);
+}
+
+void update_ptime_interrupt(enclave_id eid)
+{
+  struct schedule_data *sched;
+  unsigned long delta_ptime_interrupt;
+  unsigned long current_ptime;
+
+  sched = &enclaves[eid].sched;
+
+  sched->time_debt = (long) sched->ptime * sched->budget_cycles / sched->period_ticks - sched->etime;
+  
+  if (sched->time_debt >= (long) sched->time_debt_threshold)
+    delta_ptime_interrupt = 0; // Need to immediately interrupt
+  else
+    delta_ptime_interrupt = (sched->time_debt_threshold - sched->time_debt) * sched->period_ticks / sched->budget_cycles;
+  current_ptime = read_mtime();
+  sched->ptime_interrupt = current_ptime + delta_ptime_interrupt;
+  sbi_printf("[update_ptime_interrupt] eid: %u, current_ptime: %lu, etime: %lu, ptime: %lu, ptime_interrupt: %lu, time_debt: %ld, dpint: %ld, time_debt_threshold: %lu, budget_cycles: %lu, period_ticks: %lu\n",
+              eid, current_ptime, sched->etime, sched->ptime,
+              sched->ptime_interrupt, sched->time_debt, delta_ptime_interrupt,
+              sched->time_debt_threshold, sched->budget_cycles, sched->period_ticks);
+             
+  update_mtimecmp();
+}
+
+/* Check next interrupt enclave, if current time is greater than
+ * ptime_interrupt, then return the enclave ID, otherwise return -1.
+ */
+int get_urgent_enclave_id(void)
+{
+  enclave_id eid = get_next_interrupt_encl_id();
+  unsigned long current_ptime = read_mtime();
+  
+  if (ENCLAVE_EXISTS(eid) &&
+      enclaves[eid].sched.ptime_interrupt > 0 &&
+      current_ptime >= enclaves[eid].sched.ptime_interrupt) {
+    return eid;
+  }
+
+  return -1; // No urgent enclave
 }

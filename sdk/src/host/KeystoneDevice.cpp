@@ -10,9 +10,10 @@ namespace Keystone {
 KeystoneDevice::KeystoneDevice() { eid = -1; }
 
 Error
-KeystoneDevice::create(uint64_t minPages) {
+KeystoneDevice::create(uint64_t minPages, int reservedID) {
   struct keystone_ioctl_create_enclave encl;
   encl.min_pages = minPages;
+  encl.reserved_id = reservedID;
 
   if (ioctl(fd, KEYSTONE_IOC_CREATE_ENCLAVE, &encl)) {
     perror("ioctl error");
@@ -41,13 +42,17 @@ KeystoneDevice::initUTM(size_t size) {
 Error
 KeystoneDevice::finalize(
     uintptr_t runtimePhysAddr, uintptr_t eappPhysAddr, uintptr_t freePhysAddr,
-    uintptr_t freeRequested) {
+    uintptr_t freeRequested, uint64_t budgetCycles, uint64_t periodTicks,
+    uint64_t timeDebtThreshold) {
   struct keystone_ioctl_create_enclave encl;
   encl.eid            = eid;
   encl.runtime_paddr  = runtimePhysAddr;
   encl.user_paddr     = eappPhysAddr;
   encl.free_paddr     = freePhysAddr;
   encl.free_requested = freeRequested;
+  encl.budget_cycles = budgetCycles;
+  encl.period_ticks = periodTicks;
+  encl.time_debt_threshold = timeDebtThreshold;
 
   if (ioctl(fd, KEYSTONE_IOC_FINALIZE_ENCLAVE, &encl)) {
     perror("ioctl error");
@@ -143,16 +148,24 @@ KeystoneDevice::initDevice() { // TODO: why does this need params
 }
 
 Error
-KeystoneDevice::attestSM(unsigned char* hash, unsigned char* publicKey, unsigned char* signature) {
+KeystoneDevice::request(struct RequestParams* params) {
   struct keystone_ioctl_attest_sm req;
+  req.req_mem_size = params->reqmemsize;
+  req.budget_cycles = params->budget_cycles;
+  req.period_ticks = params->period_ticks;
+  req.time_debt_threshold = params->time_debt_threshold;
+  
   if (ioctl(fd, KEYSTONE_IOC_ATTEST_SM, &req)) {
     perror("ioctl error");
     return Error::IoctlErrorAttestSM;
   }
 
-  memcpy(hash, req.hash, sizeof(req.hash));
-  memcpy(publicKey, req.public_key, sizeof(req.public_key));
-  memcpy(signature, req.signature, sizeof(req.signature));
+  memcpy(params->hash, req.hash, sizeof(req.hash));
+  memcpy(params->publicKey, req.public_key, sizeof(req.public_key));
+  memcpy(params->signature, req.signature, sizeof(req.signature));
+
+  params->respmemsize = req.resp_mem_size;
+  params->reservedID = req.reserved_id;
 
   return Error::Success;
 }
