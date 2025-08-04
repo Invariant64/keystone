@@ -10,6 +10,7 @@
 #include <sbi/sbi_misaligned_ldst.h>
 #include <sbi/sbi_timer.h>
 #include <sbi/sbi_trap.h>
+#include "cpu.h"
 
 static void sbi_trap_error(const char *msg, int rc,
 				      ulong mcause, ulong mtval, ulong mtval2,
@@ -87,6 +88,7 @@ void sbi_trap_handler_keystone_enclave(struct sbi_trap_regs *regs)
 	ulong mcause = csr_read(CSR_MCAUSE);
 	ulong mtval = csr_read(CSR_MTVAL), mtval2 = 0, mtinst = 0;
 	struct sbi_trap_info trap;
+	int eid = cpu_get_enclave_id();
 
 	if (misa_extension('H')) {
 		mtval2 = csr_read(CSR_MTVAL2);
@@ -97,6 +99,15 @@ void sbi_trap_handler_keystone_enclave(struct sbi_trap_regs *regs)
 		mcause &= ~(1UL << (__riscv_xlen - 1));
 		switch (mcause) {
 		case IRQ_M_TIMER: {
+			csr_clear(CSR_MIE, MIP_MTIP);
+			record_enclave_time(eid, FALSE);
+			record_enclave_time(eid, TRUE);
+			update_ptime_interrupt(eid);
+			if (get_urgent_enclave_id() == eid) {
+				sbi_printf("[update_ptime_interrupt] resume enclave: %d from enclave\n", (int)eid);
+				// regs->mepc -= 4;
+				return;
+			}
       regs->mepc -= 4;
       sbi_sm_stop_enclave(regs, STOP_TIMER_INTERRUPT);
       regs->a0 = SBI_ERR_SM_ENCLAVE_INTERRUPTED;

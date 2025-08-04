@@ -81,6 +81,16 @@ static void mtimer_event_start(u64 next_event)
 		    &time_cmp[target_hart - mt->first_hartid]);
 }
 
+void write_mtimecmp(u64 value)
+{
+	mtimer_event_start(value);
+}
+
+u64 read_mtime(void)
+{
+	return mtimer_value();
+}
+
 static struct sbi_timer_device mtimer = {
 	.name = "aclint-mtimer",
 	.timer_value = mtimer_value,

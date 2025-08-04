@@ -193,12 +193,27 @@ int sbi_trap_redirect(struct sbi_trap_regs *regs,
 	return 0;
 }
 
+extern unsigned long sbi_sm_resume_enclave(struct sbi_trap_regs *regs, int eid);
+extern int get_next_interrupt_encl_id(void);
+
 static int sbi_trap_nonaia_irq(struct sbi_trap_regs *regs, ulong mcause)
 {
+	int eid = get_next_interrupt_encl_id();
+
 	mcause &= ~(1UL << (__riscv_xlen - 1));
 	switch (mcause) {
 	case IRQ_M_TIMER:
 		sbi_timer_process();
+		sbi_printf("sbi_trap_nonaia_irq: M_TIMER\n");
+		if (eid != -1) {
+			sbi_printf("[update_ptime_interrupt] resume enclave: %d\n", eid);
+			regs->mepc -= 4;
+
+			sbi_sm_resume_enclave(regs, eid);
+			// regs->a0 = SBI_ERR_SM_ENCLAVE_INTERRUPTED;
+			regs->mepc += 4;
+		}
+		
 		break;
 	case IRQ_M_SOFT:
 		sbi_ipi_process();

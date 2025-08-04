@@ -50,4 +50,7 @@ int aclint_mtimer_warm_init(void);
 int aclint_mtimer_cold_init(struct aclint_mtimer_data *mt,
 			    struct aclint_mtimer_data *reference);
 
+void write_mtimecmp(u64 value);
+u64 read_mtime(void);
+
 #endif
