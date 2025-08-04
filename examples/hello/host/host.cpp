@@ -33,9 +33,9 @@ main(int argc, char** argv) {
   req.reqmemsize = 1400 * 1024;
   req.respmemsize = 0; // will be set by the driver
   req.reservedID = -1;
-  req.budget_cycles = 1000000; // Example value, adjust as needed
-  req.period_ticks = 1000; // Example value, adjust as needed
-  req.time_debt_threshold = 100; // Example value, adjust as needed
+  req.budget_cycles = 250000; // Example value, adjust as needed
+  req.period_ticks = 10000; // Example value, adjust as needed
+  req.time_debt_threshold = 20000000; // Example value, adjust as needed
 
   enclave.request(&req);
 

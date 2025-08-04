@@ -27,7 +27,7 @@ endif
 
 run:
 	$(call log,info,Starting QEMU)
-	$(BUILDROOT_BUILDDIR)/host/bin/qemu-system-riscv$(KEYSTONE_BITS) $(QEMU_FLAGS)
+	$(BUILDROOT_BUILDDIR)/host/bin/qemu-system-riscv$(KEYSTONE_BITS) $(QEMU_FLAGS) 2>&1 | tee qemu_output.txt
 
 kill:
 	$(call log,info,Killing QEMU)
