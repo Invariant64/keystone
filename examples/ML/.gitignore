@@ -1,0 +1,18 @@
+# ML目录 .gitignore
+# 只允许指定的5个模型：lenet, squeezenet, resnet50, resnext29, densenet
+
+# 忽略所有内容
+/*
+
+# 白名单：允许的模型目录
+!/lenet/
+!/squeezenet/
+!/resnet50/
+!/resnext29/
+!/densenet/
+
+# 保留配置文件
+!/CMakeLists.txt
+!/README.md
+!/.gitignore
+!/.gitattributes

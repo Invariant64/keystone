@@ -1,0 +1,7 @@
+Program,Run_Number,Heap_Used_Bytes,Available_Memory_Bytes,Total_Memory_Bytes,Memory_Utilization_Percent,Timestamp_Cycles
+simple-neural-network.ke,1,139264,268058624,268492800,0.05,6883355656
+simple-neural-network.ke,1,47181824,220917760,268492800,17.57,6883981130
+simple-neural-network.ke,1,55025664,213057536,268492800,20.49,6884372961
+simple-neural-network.ke,1,245587968,22122496,268492800,91.47,6886722611
+simple-neural-network.ke,1,245587968,22122496,268492800,91.47,6886726669
+simple-neural-network.ke,1,248291328,19415040,268492800,92.48,6945372655

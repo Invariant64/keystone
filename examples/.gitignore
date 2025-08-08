@@ -1,0 +1,18 @@
+# 忽略所有内容
+/*
+
+# 保留的一级目录（注意结尾的 / 表示目录）
+!/ML/
+!/mem/
+!/rv8-bench/
+!/coremark/
+!/io/
+!/attestation/
+!/tests/
+!/stress_test/
+
+# 另外，保留根目录下的几个文件
+!/CMakeLists.txt
+!/*.cmake
+!/README.md
+!/.gitignore

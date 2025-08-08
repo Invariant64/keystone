@@ -1,0 +1,55 @@
+################################################################################
+#
+# Keystone examples
+#
+################################################################################
+
+ifeq ($(KEYSTONE_EXAMPLES),)
+$(error KEYSTONE_EXAMPLES directory not defined)
+else
+include $(KEYSTONE)/mkutils/pkg-keystone.mk
+endif
+
+KEYSTONE_EXAMPLES_DEPENDENCIES += host-keystone-sdk keystone-runtime
+ifeq ($(KEYSTONE_PLATFORM),mpfs)
+KEYSTONE_EXAMPLES_DEPENDENCIES += hss
+KEYSTONE_EXAMPLES_CONF_OPTS += -Dfw_bin=$(BINARIES_DIR)/hss-l2scratch.bin
+else
+KEYSTONE_EXAMPLES_DEPENDENCIES += opensbi
+endif
+
+KEYSTONE_EXAMPLES_CONF_OPTS += -DKEYSTONE_SDK_DIR=$(HOST_DIR)/usr/share/keystone/sdk \
+                                -DKEYSTONE_EYRIE_RUNTIME=$(KEYSTONE_RUNTIME_BUILDDIR) \
+                                -DKEYSTONE_BITS=${KEYSTONE_BITS}
+ifeq ($(KEYSTONE_PLATFORM),cva6)
+KEYSTONE_EXAMPLES_CONF_OPTS += -Dfw_bin=$(BINARIES_DIR)/fw_payload.bin
+endif
+
+KEYSTONE_EXAMPLES_MAKE_ENV += KEYSTONE_SDK_DIR=$(HOST_DIR)/usr/share/keystone/sdk
+KEYSTONE_EXAMPLES_MAKE_OPTS += examples
+
+# Install only .ke files
+define KEYSTONE_EXAMPLES_INSTALL_TARGET_CMDS
+	find $(@D) -name '*.ke' | \
+                xargs -i{} $(INSTALL) -D -m 755 -t $(TARGET_DIR)/usr/share/keystone/examples/ {}
+	$(INSTALL) -D -m 755 $(KEYSTONE_EXAMPLES)/stress_test/run_stress_tests.sh $(TARGET_DIR)/usr/share/keystone/examples/run_stress_tests.sh
+	$(INSTALL) -D -m 755 $(KEYSTONE_EXAMPLES)/mem/memory_stats/record_memory_stats.sh $(TARGET_DIR)/usr/share/keystone/examples/record_memory_stats.sh
+	# 复制 sysstat 二进制文件从 examples/sysstat/exe/bin 到目标 /usr/bin
+	$(INSTALL) -D -m 755 $(KEYSTONE_EXAMPLES)/sysstat/exe/bin/* $(TARGET_DIR)/usr/bin
+	# 复制 ML 目录下的 .ke 文件到专门的 ML 子目录
+	mkdir -p $(TARGET_DIR)/usr/share/keystone/examples/ML
+	find $(@D)/ML -name '*.ke' 2>/dev/null | \
+                xargs -r -i{} $(INSTALL) -D -m 755 {} $(TARGET_DIR)/usr/share/keystone/examples/ML/
+	# 复制 rv8-bench 目录下的 .ke 文件
+	mkdir -p $(TARGET_DIR)/usr/share/keystone/examples/rv8-bench
+	find $(@D)/rv8-bench -name '*.ke' 2>/dev/null | \
+                xargs -r -i{} $(INSTALL) -D -m 755 {} $(TARGET_DIR)/usr/share/keystone/examples/rv8-bench/
+	# 复制 mem 目录下的 .ke 文件
+	mkdir -p $(TARGET_DIR)/usr/share/keystone/examples/mem
+	find $(@D)/mem -name '*.ke' 2>/dev/null | \
+                xargs -r -i{} $(INSTALL) -D -m 755 {} $(TARGET_DIR)/usr/share/keystone/examples/mem/
+endef
+
+$(eval $(keystone-package))
+$(eval $(cmake-package))
+
