@@ -156,7 +156,12 @@ uintptr_t io_syscall_write(int fd, void* buf, size_t len){
   size_t totalsize = (sizeof(struct edge_syscall) +
                       sizeof(sargs_SYS_write) +
                       len);
-
+  if (fd == 1 || fd == 2) {
+    // If writing to stdout or stderr, print the output
+    print_strace("[runtime] write output: \"%s\"\r\n", (char*)args->buf);
+    // ret = len; // Simulate successful write
+    // goto done;
+  }
   ret = dispatch_edgecall_syscall(edge_syscall, totalsize);
 
  done:

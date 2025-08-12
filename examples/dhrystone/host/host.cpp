@@ -14,6 +14,10 @@ main(int argc, char** argv) {
 
   params.setFreeMemSize(256 * 1024);
   params.setUntrustedSize(256 * 1024);
+  // no limit
+  params.setBudgetCycles(1500000);
+  params.setPeriodTicks(10000);
+  params.setTimeDebtThreshold(0);
 
   struct timespec time1, time2; // Added for init time
 

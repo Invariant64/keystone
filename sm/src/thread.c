@@ -14,34 +14,34 @@ void switch_vector_host(void){
   csr_write(mtvec, &_trap_handler);
 }
 
-void swap_prev_mstatus(struct thread_state* thread, struct sbi_trap_regs* regs, uintptr_t current_mstatus) {
-  //Time interrupts can occur in either user mode or supervisor mode
+// regs -> to
+// from -> regs
+void rw_mstatus(struct thread_state* from, struct thread_state* to, struct sbi_trap_regs* regs) {
   uintptr_t mstatus_mask = MSTATUS_SIE | MSTATUS_SPIE | MSTATUS_SPP |
                             MSTATUS_MPP | MSTATUS_FS | MSTATUS_SUM |
                             MSTATUS_MXR;
-
-  uintptr_t tmp = thread->prev_mstatus;
-  thread->prev_mstatus = (current_mstatus & ~mstatus_mask) | (current_mstatus & mstatus_mask);
-  regs->mstatus = (current_mstatus & ~mstatus_mask) | tmp;
+  uintptr_t current_mstatus = regs->mstatus;
+  to->prev_mstatus = (current_mstatus & ~mstatus_mask) | (current_mstatus & mstatus_mask);
+  regs->mstatus = (current_mstatus & ~mstatus_mask) | from->prev_mstatus;
 }
 
-/* Swaps the entire s-mode visible state, general registers and then csrs */
-void swap_prev_state(struct thread_state* thread, struct sbi_trap_regs* regs, int return_on_resume)
+// regs -> to
+// from -> regs
+void rw_state(struct thread_state* from, struct thread_state* to, struct sbi_trap_regs* regs, int return_on_resume)
 {
   int i;
 
-  uintptr_t* prev = (uintptr_t*) &thread->prev_state;
+  uintptr_t* from_prev = (uintptr_t*) &from->prev_state;
+  uintptr_t* to_prev = (uintptr_t*) &to->prev_state;
   for(i=0; i<32; i++)
   {
-    /* swap state */
-    uintptr_t tmp = prev[i];
-    prev[i] = ((unsigned long *)regs)[i];
-    ((unsigned long *)regs)[i] = tmp;
+    to_prev[i] = ((unsigned long *)regs)[i];
+    ((unsigned long *)regs)[i] = from_prev[i];
   }
 
-  prev[0] = !return_on_resume;
+  to_prev[0] = !return_on_resume;
 
-  swap_prev_smode_csrs(thread);
+  rw_smode_csrs(from, to);
 
   return;
 }
@@ -50,38 +50,36 @@ void swap_prev_state(struct thread_state* thread, struct sbi_trap_regs* regs, in
 /* TODO: Right now we are only handling the ones that our test
    platforms support. Realistically we should have these behind
    defines for extensions (ex: N extension)*/
-void swap_prev_smode_csrs(struct thread_state*
-thread){
+// csr -> to
+// from -> csr
+void rw_smode_csrs(struct thread_state* from, struct thread_state* to)
+{
+#define LOCAL_RW_CSR(csrname) \
+  to->prev_csrs.csrname = csr_read(csrname); \
+  csr_write(csrname, from->prev_csrs.csrname);
 
-  uintptr_t tmp;
-
-#define LOCAL_SWAP_CSR(csrname) \
-  tmp = thread->prev_csrs.csrname;                 \
-  thread->prev_csrs.csrname = csr_read(csrname);   \
-  csr_write(csrname, tmp);
-
-  LOCAL_SWAP_CSR(sstatus);
+  LOCAL_RW_CSR(sstatus);
   // These only exist with N extension.
-  //LOCAL_SWAP_CSR(sedeleg);
-  //LOCAL_SWAP_CSR(sideleg);
-  LOCAL_SWAP_CSR(sie);
-  LOCAL_SWAP_CSR(stvec);
-  LOCAL_SWAP_CSR(scounteren);
-  LOCAL_SWAP_CSR(sscratch);
-  LOCAL_SWAP_CSR(sepc);
-  LOCAL_SWAP_CSR(scause);
-  LOCAL_SWAP_CSR(sbadaddr);
-  LOCAL_SWAP_CSR(sip);
-  LOCAL_SWAP_CSR(satp);
-
-#undef LOCAL_SWAP_CSR
+  //LOCAL_RW_CSR(sedeleg);
+  //LOCAL_RW_CSR(sideleg);
+  LOCAL_RW_CSR(sie);
+  LOCAL_RW_CSR(stvec);
+  LOCAL_RW_CSR(scounteren);
+  LOCAL_RW_CSR(sscratch);
+  LOCAL_RW_CSR(sepc);
+  LOCAL_RW_CSR(scause);
+  LOCAL_RW_CSR(sbadaddr);
+  LOCAL_RW_CSR(sip);
+  LOCAL_RW_CSR(satp);
+#undef LOCAL_RW_CSR
 }
 
-void swap_prev_mepc(struct thread_state* thread, struct sbi_trap_regs* regs, uintptr_t current_mepc)
+// regs -> to
+// from -> regs
+void rw_mepc(struct thread_state* from, struct thread_state* to, struct sbi_trap_regs* regs)
 {
-  uintptr_t tmp = thread->prev_mepc;
-  thread->prev_mepc = current_mepc;
-  regs->mepc = tmp;
+  to->prev_mepc = regs->mepc;
+  regs->mepc = from->prev_mepc;
 }
 
 

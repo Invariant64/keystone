@@ -12,8 +12,11 @@ main(int argc, char** argv) {
   Enclave enclave;
   Params params;
 
-  params.setFreeMemSize(256 * 1024 * 1024);
+  params.setFreeMemSize(128 * 1024 * 1024);
   params.setUntrustedSize(1024 * 1024);
+  params.setBudgetCycles(1990000);
+  params.setPeriodTicks(10000);
+  params.setTimeDebtThreshold(20000000);
 
   struct timespec time1, time2; // Added for init time
 

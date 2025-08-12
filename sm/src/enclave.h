@@ -78,6 +78,8 @@ struct enclave
   struct platform_enclave_data ped;
 
   struct schedule_data sched;
+
+  int in_edge_call;
 };
 
 /* attestation reports */
@@ -109,6 +111,17 @@ struct sealing_key
   uint8_t signature[SIGNATURE_SIZE];
 };
 
+struct timer_info
+{
+  uint64_t mtimecmp;
+  enclave_id eid;
+  enum reason {
+    REASON_NONE = 0,
+    REASON_DEBT_FINISHED,
+    REASON_NORMAL,
+  } reason;
+};
+
 /*** SBI functions & external functions ***/
 // callables from the host
 unsigned long create_enclave(unsigned long *eid, struct keystone_sbi_create_t create_args);
@@ -131,9 +144,14 @@ uintptr_t get_enclave_region_size(enclave_id eid, int memid);
 unsigned long get_sealing_key(uintptr_t seal_key, uintptr_t key_ident, size_t key_ident_size, enclave_id eid);
 // interrupt handlers
 void sbi_trap_handler_keystone_enclave(struct sbi_trap_regs *regs);
+unsigned long switch_enclave(struct sbi_trap_regs *regs, enclave_id from, enclave_id to);
 
 void record_enclave_time(enclave_id eid, bool is_start);
 void update_mtimecmp(void);
 void update_ptime_interrupt(enclave_id eid);
 int get_urgent_enclave_id(void);
+int enclave_is_in_edge_call(enclave_id eid);
+void enclave_clear_edge_call(enclave_id eid);
+enclave_id update_timer(enclave_id eid);
+void update_timer_normal(void);
 #endif

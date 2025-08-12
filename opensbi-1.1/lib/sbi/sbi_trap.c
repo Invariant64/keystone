@@ -195,6 +195,7 @@ int sbi_trap_redirect(struct sbi_trap_regs *regs,
 
 extern unsigned long sbi_sm_resume_enclave(struct sbi_trap_regs *regs, int eid);
 extern int get_next_interrupt_encl_id(void);
+extern int enclave_is_in_edge_call(int eid);
 
 static int sbi_trap_nonaia_irq(struct sbi_trap_regs *regs, ulong mcause)
 {
@@ -204,16 +205,17 @@ static int sbi_trap_nonaia_irq(struct sbi_trap_regs *regs, ulong mcause)
 	switch (mcause) {
 	case IRQ_M_TIMER:
 		sbi_timer_process();
-		sbi_printf("sbi_trap_nonaia_irq: M_TIMER\n");
+		// sbi_printf("sbi_trap_nonaia_irq: M_TIMER\n");
 		if (eid != -1) {
-			sbi_printf("[update_ptime_interrupt] resume enclave: %d\n", eid);
+			// sbi_printf("[update_ptime_interrupt] resume enclave: %d from os\n", eid);
+			// if (enclave_is_in_edge_call(eid)) {
+			// 	sbi_printf("Enclave %u is in edge call, cannot resume from timer interrupt\n", eid);
+			// 	break;
+			// }
 			regs->mepc -= 4;
-
 			sbi_sm_resume_enclave(regs, eid);
-			// regs->a0 = SBI_ERR_SM_ENCLAVE_INTERRUPTED;
 			regs->mepc += 4;
 		}
-		
 		break;
 	case IRQ_M_SOFT:
 		sbi_ipi_process();
@@ -273,7 +275,7 @@ static int sbi_trap_aia_irq(struct sbi_trap_regs *regs, ulong mcause)
 struct sbi_trap_regs *sbi_trap_handler(struct sbi_trap_regs *regs)
 {
 	int rc = SBI_ENOTSUPP;
-	const char *msg = "trap handler failed";
+	const char *msg = "trap handler failed opensbi";
 	ulong mcause = csr_read(CSR_MCAUSE);
 	ulong mtval = csr_read(CSR_MTVAL), mtval2 = 0, mtinst = 0;
 	struct sbi_trap_info trap;

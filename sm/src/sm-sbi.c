@@ -73,6 +73,7 @@ unsigned long sbi_sm_stop_enclave(struct sbi_trap_regs *regs, unsigned long requ
   regs->a0 = stop_enclave(regs, request, eid);
   regs->mepc += 4;
   update_ptime_interrupt(eid);
+  update_timer_normal();
   sbi_trap_exit(regs);
   return 0;
 }

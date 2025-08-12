@@ -207,7 +207,7 @@ Enclave::init(
   uint64_t total_size = enclaveFile->getFileSize() + runtimeFile->getFileSize() +
       loaderFile->getFileSize();
 
-  if (total_size > params.getFreeMemSize()) {
+  if (params.getReservedID() >= 0 && total_size > params.getFreeMemSize()) {
     ERROR("All binaries are too large to fit in enclave memory");
     destroy();
     return Error::DeviceError;

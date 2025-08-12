@@ -16,7 +16,7 @@
 
 #define CLOCK_FREQ 1000000000
 
-#define TIME_FREQ 1000000UL
+#define TIME_FREQ 10000000UL
 
 //TODO we should check which clock this is
 uintptr_t linux_clock_gettime(__clockid_t clock, struct timespec *tp){

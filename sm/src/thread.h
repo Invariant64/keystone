@@ -76,10 +76,14 @@ struct thread_state
 };
 
 /* swap previous and current thread states */
-void swap_prev_state(struct thread_state* state, struct sbi_trap_regs* regs, int return_on_resume);
-void swap_prev_mepc(struct thread_state* state, struct sbi_trap_regs* regs, uintptr_t mepc);
-void swap_prev_mstatus(struct thread_state* state, struct sbi_trap_regs* regs, uintptr_t mstatus);
-void swap_prev_smode_csrs(struct thread_state* thread);
+// void swap_prev_state(struct thread_state* state, struct sbi_trap_regs* regs, int return_on_resume);
+// void swap_prev_mepc(struct thread_state* state, struct sbi_trap_regs* regs, uintptr_t mepc);
+// void swap_prev_mstatus(struct thread_state* state, struct sbi_trap_regs* regs, uintptr_t mstatus);
+// void swap_prev_smode_csrs(struct thread_state* thread);
+void rw_state(struct thread_state* from, struct thread_state* to, struct sbi_trap_regs* regs, int return_on_resume);
+void rw_smode_csrs(struct thread_state* from, struct thread_state* to);
+void rw_mepc(struct thread_state* from, struct thread_state* to, struct sbi_trap_regs* regs);
+void rw_mstatus(struct thread_state* from, struct thread_state* to, struct sbi_trap_regs* regs);
 
 void switch_vector_enclave(void);
 void switch_vector_host(void);

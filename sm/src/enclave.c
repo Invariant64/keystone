@@ -15,8 +15,13 @@
 #include <limits.h>
 #include <sbi_utils/timer/aclint_mtimer.h>
 #include "schedule.h"
+#include "sm_assert.h"
 
 struct enclave enclaves[ENCL_MAX];
+
+struct thread_state host_thread;
+
+struct timer_info mtimer;
 
 // Enclave IDs are unsigned ints, so we do not need to check if eid is
 // greater than or equal to 0
@@ -46,9 +51,9 @@ static inline void context_switch_to_enclave(struct sbi_trap_regs* regs,
                                                 enclave_id eid,
                                                 int load_parameters){
   /* save host context */
-  swap_prev_state(&enclaves[eid].threads[0], regs, 1);
-  swap_prev_mepc(&enclaves[eid].threads[0], regs, regs->mepc);
-  swap_prev_mstatus(&enclaves[eid].threads[0], regs, regs->mstatus);
+  rw_state(&enclaves[eid].threads[0], &host_thread, regs, 1);
+  rw_mepc(&enclaves[eid].threads[0], &host_thread, regs);
+  rw_mstatus(&enclaves[eid].threads[0], &host_thread, regs);
 
   uintptr_t interrupts = MIP_STIP;
   csr_write(mideleg, interrupts);
@@ -109,9 +114,12 @@ static inline void context_switch_to_host(struct sbi_trap_regs *regs,
   csr_write(mideleg, interrupts);
 
   /* restore host context */
-  swap_prev_state(&enclaves[eid].threads[0], regs, return_on_resume);
-  swap_prev_mepc(&enclaves[eid].threads[0], regs, regs->mepc);
-  swap_prev_mstatus(&enclaves[eid].threads[0], regs, regs->mstatus);
+  // swap_prev_state(&enclaves[eid].threads[0], regs, return_on_resume);
+  // swap_prev_mepc(&enclaves[eid].threads[0], regs, regs->mepc);
+  // swap_prev_mstatus(&enclaves[eid].threads[0], regs, regs->mstatus);
+  rw_state(&host_thread, &enclaves[eid].threads[0], regs, return_on_resume);
+  rw_mepc(&host_thread, &enclaves[eid].threads[0], regs);
+  rw_mstatus(&host_thread, &enclaves[eid].threads[0], regs);
 
   switch_vector_host();
 
@@ -136,6 +144,27 @@ static inline void context_switch_to_host(struct sbi_trap_regs *regs,
   cpu_exit_enclave_context();
 
   return;
+}
+
+static void context_enclave_switch_to_enclave(struct sbi_trap_regs *regs, enclave_id from, enclave_id to)
+{
+  rw_state(&enclaves[to].threads[0], &enclaves[from].threads[0], regs, 1);
+  rw_mepc(&enclaves[to].threads[0], &enclaves[from].threads[0], regs);
+  rw_mstatus(&enclaves[to].threads[0], &enclaves[from].threads[0], regs);
+
+  // set PMP
+  osm_pmp_set(PMP_NO_PERM);
+  int memid;
+  for(memid=0; memid < ENCLAVE_REGIONS_MAX; memid++) {
+    if(enclaves[to].regions[memid].type != REGION_INVALID) {
+      pmp_set_keystone(enclaves[to].regions[memid].pmp_rid, PMP_ALL_PERM);
+    }
+    if(enclaves[from].regions[memid].type != REGION_INVALID) {
+      pmp_set_keystone(enclaves[from].regions[memid].pmp_rid, PMP_NO_PERM);
+    }
+  }
+  
+  cpu_enter_enclave_context(to);
 }
 
 
@@ -432,6 +461,7 @@ unsigned long create_enclave(unsigned long *eidptr, struct keystone_sbi_create_t
   enclaves[eid].sched.time_debt_threshold = create_args.time_debt_threshold;
   sbi_printf("[create enclave] budget_cycles: %lu, period_ticks: %lu, time_debt_threshold: %lu\n",
              enclaves[eid].sched.budget_cycles, enclaves[eid].sched.period_ticks, enclaves[eid].sched.time_debt_threshold);
+  enclaves[eid].in_edge_call = 0;
 
   spin_unlock(&encl_lock);
   return SBI_ERR_SM_ENCLAVE_SUCCESS;
@@ -583,10 +613,45 @@ unsigned long stop_enclave(struct sbi_trap_regs *regs, uint64_t request, enclave
     case(STOP_TIMER_INTERRUPT):
       return SBI_ERR_SM_ENCLAVE_INTERRUPTED;
     case(STOP_EDGE_CALL_HOST):
+      // If the enclave is stopped by an edge call, it only can be resumed
+      // by host, can not be resumed by security monitor.
+      enclaves[eid].in_edge_call = 1;
+      sbi_printf("Enclave %u stopped by edge call to host\n", eid);
       return SBI_ERR_SM_ENCLAVE_EDGE_CALL_HOST;
     default:
       return SBI_ERR_SM_ENCLAVE_UNKNOWN_ERROR;
   }
+}
+
+unsigned long switch_enclave(struct sbi_trap_regs *regs, enclave_id from, enclave_id to)
+{
+  int switchable;
+
+  spin_lock(&encl_lock);
+  switchable = (ENCLAVE_EXISTS(from)
+                && ENCLAVE_EXISTS(to)
+                && enclaves[from].state == RUNNING
+                && (enclaves[to].state == RUNNING || enclaves[to].state == STOPPED)
+                && enclaves[to].n_thread < MAX_ENCL_THREADS);
+
+  if(switchable) {
+    enclaves[from].n_thread--;
+    if(enclaves[from].n_thread == 0)
+      enclaves[from].state = STOPPED;
+
+    enclaves[to].n_thread++;
+    enclaves[to].state = RUNNING;
+  }
+  spin_unlock(&encl_lock);
+
+  if(!switchable)
+    return SBI_ERR_SM_ENCLAVE_NOT_RESUMABLE;
+
+  context_enclave_switch_to_enclave(regs, from, to);
+
+  sbi_printf("Switched from enclave %u to enclave %u\n", from, to);
+
+  return SBI_ERR_SM_ENCLAVE_SUCCESS;
 }
 
 unsigned long resume_enclave(struct sbi_trap_regs *regs, enclave_id eid)
@@ -736,7 +801,19 @@ void record_enclave_time(enclave_id eid, bool is_start)
   }
 }
 
-void update_mtimecmp(void)
+void set_mtimer(uint64_t next_interrupt)
+{
+  if (next_interrupt != ULONG_MAX) {
+    write_mtimecmp(next_interrupt);
+    csr_set(CSR_MIE, MIP_MTIP);
+  } else {
+    write_mtimecmp(ULONG_MAX); // Disable timer interrupt
+  }
+
+  // sbi_printf("[set_mtimer] next_interrupt: %lu\n", next_interrupt);
+}
+
+void update_timer_normal(void)
 {
   enclave_id eid;
   unsigned long next_interrupt = ULONG_MAX;
@@ -757,12 +834,8 @@ void update_mtimecmp(void)
     }
   }
 
-  if (next_interrupt != ULONG_MAX) {
-    write_mtimecmp(next_interrupt);
-    csr_set(CSR_MIE, MIP_MTIP);
-  } else {
-    write_mtimecmp(ULONG_MAX); // Disable timer interrupt
-  }
+  set_mtimer(next_interrupt);
+  
   set_next_interrupt_encl_id(next_interrupt_enclave);
 }
 
@@ -774,6 +847,11 @@ void update_ptime_interrupt(enclave_id eid)
 
   sched = &enclaves[eid].sched;
 
+  if (sched->budget_cycles == 0 || sched->period_ticks == 0) {
+    // If budget_cycles or period_ticks is 0, we do not need to update ptime_interrupt
+    return;
+  }
+
   sched->time_debt = (long) sched->ptime * sched->budget_cycles / sched->period_ticks - sched->etime;
   
   if (sched->time_debt >= (long) sched->time_debt_threshold)
@@ -782,27 +860,77 @@ void update_ptime_interrupt(enclave_id eid)
     delta_ptime_interrupt = (sched->time_debt_threshold - sched->time_debt) * sched->period_ticks / sched->budget_cycles;
   current_ptime = read_mtime();
   sched->ptime_interrupt = current_ptime + delta_ptime_interrupt;
-  sbi_printf("[update_ptime_interrupt] eid: %u, current_ptime: %lu, etime: %lu, ptime: %lu, ptime_interrupt: %lu, time_debt: %ld, dpint: %ld, time_debt_threshold: %lu, budget_cycles: %lu, period_ticks: %lu\n",
-              eid, current_ptime, sched->etime, sched->ptime,
-              sched->ptime_interrupt, sched->time_debt, delta_ptime_interrupt,
-              sched->time_debt_threshold, sched->budget_cycles, sched->period_ticks);
-             
-  update_mtimecmp();
+  // sbi_printf("[update_ptime_interrupt] eid: %u, current_ptime: %lu, etime: %lu, ptime: %lu, ptime_interrupt: %lu, time_debt: %ld, dpint: %ld, time_debt_threshold: %lu, budget_cycles: %lu, period_ticks: %lu\n",
+  //             eid, current_ptime, sched->etime, sched->ptime,
+  //             sched->ptime_interrupt, sched->time_debt, delta_ptime_interrupt,
+  //             sched->time_debt_threshold, sched->budget_cycles, sched->period_ticks);
+}
+
+#define CYCLES_PER_TICK 200
+#define INTERRUPT_COST_TICKS 5
+
+// get the ptime when the enclave get its debt under threshold
+static uint64_t get_enclave_need_ptime(enclave_id eid)
+{
+  struct schedule_data *sched = &enclaves[eid].sched;
+  sm_assert(CYCLES_PER_TICK > sched->budget_cycles / sched->period_ticks);
+  return ((long)sched->time_debt) / 
+         ((long)CYCLES_PER_TICK - sched->budget_cycles / sched->period_ticks)
+          + INTERRUPT_COST_TICKS;
+}
+
+enclave_id update_timer(enclave_id eid)
+{
+  update_ptime_interrupt(eid);
+
+  int next_eid = get_urgent_enclave_id();
+
+  if (next_eid < 0) {
+    update_timer_normal();
+    next_eid = eid;
+    csr_set(CSR_MIE, MIP_STIP);
+    // sbi_printf("No urgent enclave, continue with enclave %d\n", next_eid);
+  }
+  else {
+    update_ptime_interrupt(next_eid);
+    uint64_t need_ptime = get_enclave_need_ptime(next_eid);
+    set_mtimer(read_mtime() + need_ptime);
+    csr_clear(CSR_MIE, MIP_STIP);
+    // sbi_printf("Switch to urgent enclave %d, need_ptime: %lu\n", next_eid, need_ptime);
+  }
+
+  return next_eid;
 }
 
 /* Check next interrupt enclave, if current time is greater than
  * ptime_interrupt, then return the enclave ID, otherwise return -1.
  */
-int get_urgent_enclave_id(void)
-{
-  enclave_id eid = get_next_interrupt_encl_id();
-  unsigned long current_ptime = read_mtime();
-  
-  if (ENCLAVE_EXISTS(eid) &&
-      enclaves[eid].sched.ptime_interrupt > 0 &&
-      current_ptime >= enclaves[eid].sched.ptime_interrupt) {
-    return eid;
-  }
 
-  return -1; // No urgent enclave
+#define INTERRUPT_THRESHOLD_CYCLE 2000
+
+int get_urgent_enclave_id()
+{
+  int next_eid = -1;
+  for (int i = 0; i < ENCL_MAX; i++) {
+    if (ENCLAVE_EXISTS(i) &&
+        enclaves[i].sched.time_debt > (long)enclaves[i].sched.time_debt_threshold &&
+        (next_eid < 0 || enclaves[i].sched.time_debt_threshold < enclaves[next_eid].sched.time_debt_threshold))
+      next_eid = i;
+  }
+  return next_eid;
+}
+
+int enclave_is_in_edge_call(enclave_id eid)
+{
+  if (ENCLAVE_EXISTS(eid)) {
+    return enclaves[eid].in_edge_call;
+  }
+  return 0; // If enclave does not exist, it is not in edge call
+}
+
+void enclave_clear_edge_call(enclave_id eid)
+{
+  if (ENCLAVE_EXISTS(eid)) {
+    enclaves[eid].in_edge_call = 0;
+  }
 }
