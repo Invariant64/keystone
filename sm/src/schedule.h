@@ -3,7 +3,6 @@
 
 struct schedule_data {
   // SM managed metadata
-  unsigned long ptime; // physical time
   unsigned long ptime_start;
   unsigned long etime; // enclave time
   unsigned long etime_start;

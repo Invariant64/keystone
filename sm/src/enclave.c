@@ -148,7 +148,7 @@ static inline void context_switch_to_host(struct sbi_trap_regs *regs,
 
 static void context_enclave_switch_to_enclave(struct sbi_trap_regs *regs, enclave_id from, enclave_id to)
 {
-  rw_state(&enclaves[to].threads[0], &enclaves[from].threads[0], regs, 1);
+  rw_state(&enclaves[to].threads[0], &enclaves[from].threads[0], regs, 0);
   rw_mepc(&enclaves[to].threads[0], &enclaves[from].threads[0], regs);
   rw_mstatus(&enclaves[to].threads[0], &enclaves[from].threads[0], regs);
 
@@ -453,7 +453,6 @@ unsigned long create_enclave(unsigned long *eidptr, struct keystone_sbi_create_t
   /* EIDs are unsigned int in size, copy via simple copy */
   *eidptr = eid;
 
-  enclaves[eid].sched.ptime = 0;
   enclaves[eid].sched.etime = 0;
   enclaves[eid].sched.time_debt = 0;
   enclaves[eid].sched.budget_cycles = create_args.budget_cycles;
@@ -567,6 +566,13 @@ unsigned long run_enclave(struct sbi_trap_regs *regs, enclave_id eid)
   // Enclave is OK to run, context switch to it
   context_switch_to_enclave(regs, eid, 1);
 
+  // Stop the machine timer until next supervisor timer interrupt
+  set_mtimer(ULONG_MAX);
+
+  enclaves[eid].sched.ptime_start = read_mtime();
+
+  record_enclave_time(eid, true);
+
   return SBI_ERR_SM_ENCLAVE_SUCCESS;
 }
 
@@ -607,6 +613,8 @@ unsigned long stop_enclave(struct sbi_trap_regs *regs, uint64_t request, enclave
   if(!stoppable)
     return SBI_ERR_SM_ENCLAVE_NOT_RUNNING;
 
+  // record_enclave_time(eid, false);
+
   context_switch_to_host(regs, eid, request == STOP_EDGE_CALL_HOST);
 
   switch(request) {
@@ -642,6 +650,12 @@ unsigned long switch_enclave(struct sbi_trap_regs *regs, enclave_id from, enclav
     enclaves[to].n_thread++;
     enclaves[to].state = RUNNING;
   }
+  else {
+    sbi_printf("Cannot switch from enclave %u to enclave %u\n", from, to);
+    sbi_printf("from state: %d, to state: %d, to n_thread: %d\n",
+               enclaves[from].state, enclaves[to].state, enclaves[to].n_thread);
+    // while(1);
+  }
   spin_unlock(&encl_lock);
 
   if(!switchable)
@@ -665,12 +679,16 @@ unsigned long resume_enclave(struct sbi_trap_regs *regs, enclave_id eid)
 
   if(!resumable) {
     spin_unlock(&encl_lock);
+    sbi_printf("Enclave %u not resumable, state: %d, n_thread: %d\n",
+               eid, enclaves[eid].state, enclaves[eid].n_thread);
     return SBI_ERR_SM_ENCLAVE_NOT_RESUMABLE;
   } else {
     enclaves[eid].n_thread++;
     enclaves[eid].state = RUNNING;
   }
   spin_unlock(&encl_lock);
+
+  record_enclave_time(eid, true);
 
   // Enclave is OK to resume, context switch to it
   context_switch_to_enclave(regs, eid, 0);
@@ -778,26 +796,25 @@ unsigned long get_sealing_key(uintptr_t sealing_key, uintptr_t key_ident,
 
 void record_enclave_time(enclave_id eid, bool is_start)
 {
-  unsigned long current_ptime = read_mtime();
+  // unsigned long current_ptime = read_mtime();
   unsigned long current_etime = csr_read(mcycle);
 
   if (is_start) {
     enclaves[eid].sched.etime_start = current_etime;
-    if (enclaves[eid].sched.ptime_start == 0) {
-      // ONLY If ptime_start is not set, set it to current time
-      enclaves[eid].sched.ptime_start = current_ptime;
-    }
-    // sbi_printf("[record_enclave_time] eid: %u, etime_start: %lu, ptime_start: %lu\n",
-    //        eid, enclaves[eid].sched.etime_start, enclaves[eid].sched.ptime_start);
+    // if (enclaves[eid].sched.ptime_start == 0) {
+    //   // ONLY If ptime_start is not set, set it to current time
+    //   enclaves[eid].sched.ptime_start = current_ptime;
+    // }
+    sbi_printf("\teid: %u, etime_start: %lu\n",
+           eid, enclaves[eid].sched.etime_start);
   } else {
     unsigned long elapsed_etime = current_etime - enclaves[eid].sched.etime_start;
     // unsigned long elapsed_ptime = current_ptime - enclaves[eid].sched.ptime_start;
     enclaves[eid].sched.etime += elapsed_etime;
-    enclaves[eid].sched.ptime = current_ptime - enclaves[eid].sched.ptime_start;
+    // enclaves[eid].sched.ptime = current_ptime - enclaves[eid].sched.ptime_start;
 
-    // sbi_printf("[record_enclave_time] eid: %u, elapsed_etime: %lu, elapsed_ptime: %lu, total_etime: %lu, total_ptime: %lu\n",
-    //        eid, elapsed_etime, elapsed_ptime,
-    //        enclaves[eid].sched.etime, enclaves[eid].sched.ptime);
+    sbi_printf("\teid: %u, elapsed_etime: %lu, total_etime: %lu\n",
+           eid, elapsed_etime, enclaves[eid].sched.etime);
   }
 }
 
@@ -808,6 +825,7 @@ void set_mtimer(uint64_t next_interrupt)
     csr_set(CSR_MIE, MIP_MTIP);
   } else {
     write_mtimecmp(ULONG_MAX); // Disable timer interrupt
+    csr_clear(CSR_MIE, MIP_MTIP);
   }
 
   // sbi_printf("[set_mtimer] next_interrupt: %lu\n", next_interrupt);
@@ -844,6 +862,7 @@ void update_ptime_interrupt(enclave_id eid)
   struct schedule_data *sched;
   unsigned long delta_ptime_interrupt;
   unsigned long current_ptime;
+  unsigned long ptime;
 
   sched = &enclaves[eid].sched;
 
@@ -852,18 +871,19 @@ void update_ptime_interrupt(enclave_id eid)
     return;
   }
 
-  sched->time_debt = (long) sched->ptime * sched->budget_cycles / sched->period_ticks - sched->etime;
+  current_ptime = read_mtime();
+  ptime = current_ptime - sched->ptime_start;
+  sched->time_debt = (long) ptime * sched->budget_cycles / sched->period_ticks - sched->etime;
   
   if (sched->time_debt >= (long) sched->time_debt_threshold)
     delta_ptime_interrupt = 0; // Need to immediately interrupt
   else
     delta_ptime_interrupt = (sched->time_debt_threshold - sched->time_debt) * sched->period_ticks / sched->budget_cycles;
-  current_ptime = read_mtime();
   sched->ptime_interrupt = current_ptime + delta_ptime_interrupt;
-  // sbi_printf("[update_ptime_interrupt] eid: %u, current_ptime: %lu, etime: %lu, ptime: %lu, ptime_interrupt: %lu, time_debt: %ld, dpint: %ld, time_debt_threshold: %lu, budget_cycles: %lu, period_ticks: %lu\n",
-  //             eid, current_ptime, sched->etime, sched->ptime,
-  //             sched->ptime_interrupt, sched->time_debt, delta_ptime_interrupt,
-  //             sched->time_debt_threshold, sched->budget_cycles, sched->period_ticks);
+  sbi_printf("[update_ptime_interrupt] eid: %u, current_ptime: %lu, etime: %lu, ptime: %lu, ptime_interrupt: %lu, time_debt: %ld, dpint: %ld, time_debt_threshold: %lu, budget_cycles: %lu, period_ticks: %lu\n",
+              eid, current_ptime, sched->etime, ptime,
+              sched->ptime_interrupt, sched->time_debt, delta_ptime_interrupt,
+              sched->time_debt_threshold, sched->budget_cycles, sched->period_ticks);
 }
 
 #define CYCLES_PER_TICK 200
@@ -879,7 +899,7 @@ static uint64_t get_enclave_need_ptime(enclave_id eid)
           + INTERRUPT_COST_TICKS;
 }
 
-enclave_id update_timer(enclave_id eid)
+int update_timer(enclave_id eid)
 {
   update_ptime_interrupt(eid);
 
@@ -887,16 +907,16 @@ enclave_id update_timer(enclave_id eid)
 
   if (next_eid < 0) {
     update_timer_normal();
-    next_eid = eid;
+    // next_eid = eid;
     csr_set(CSR_MIE, MIP_STIP);
-    // sbi_printf("No urgent enclave, continue with enclave %d\n", next_eid);
+    sbi_printf("\tNo urgent enclave, continue with enclave %d\n", next_eid);
   }
   else {
     update_ptime_interrupt(next_eid);
     uint64_t need_ptime = get_enclave_need_ptime(next_eid);
     set_mtimer(read_mtime() + need_ptime);
     csr_clear(CSR_MIE, MIP_STIP);
-    // sbi_printf("Switch to urgent enclave %d, need_ptime: %lu\n", next_eid, need_ptime);
+    sbi_printf("\tFrom enclave %d switch to urgent enclave %d, need_ptime: %lu\n", eid, next_eid, need_ptime);
   }
 
   return next_eid;
@@ -911,9 +931,10 @@ enclave_id update_timer(enclave_id eid)
 int get_urgent_enclave_id()
 {
   int next_eid = -1;
+  uint64_t current_ptime = read_mtime();
   for (int i = 0; i < ENCL_MAX; i++) {
-    if (ENCLAVE_EXISTS(i) &&
-        enclaves[i].sched.time_debt > (long)enclaves[i].sched.time_debt_threshold &&
+    if (ENCLAVE_EXISTS(i) && enclaves[i].state > FRESH &&
+        enclaves[i].sched.ptime_interrupt < current_ptime &&
         (next_eid < 0 || enclaves[i].sched.time_debt_threshold < enclaves[next_eid].sched.time_debt_threshold))
       next_eid = i;
   }

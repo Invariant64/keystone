@@ -37,7 +37,7 @@ unsigned long sbi_sm_run_enclave(struct sbi_trap_regs *regs, unsigned long eid)
 {
   regs->a0 = run_enclave(regs, (unsigned int) eid);
   regs->mepc += 4;
-  record_enclave_time((unsigned int) eid, true);
+  // record_enclave_time((unsigned int) eid, true);
   sbi_trap_exit(regs);
   return 0;
 }
@@ -45,12 +45,29 @@ unsigned long sbi_sm_run_enclave(struct sbi_trap_regs *regs, unsigned long eid)
 unsigned long sbi_sm_resume_enclave(struct sbi_trap_regs *regs, unsigned long eid)
 {
   unsigned long ret;
-  record_enclave_time((unsigned int) eid, true);
+  // sbi_printf("[sbi_sm_resume_enclave] Resuming enclave: %d\n", (unsigned int) eid);
+
+  // record_enclave_time((unsigned int) eid, true);
   ret = resume_enclave(regs, (unsigned int) eid);
   if (!regs->zero)
     regs->a0 = ret;
   regs->mepc += 4;
-  
+
+  sbi_trap_exit(regs);
+  return 0;
+}
+
+unsigned long sbi_sm_switch_enclave(struct sbi_trap_regs *regs, unsigned long from, unsigned long to)
+{
+  unsigned int from_eid = (unsigned int) from;
+  unsigned int to_eid = (unsigned int) to;
+
+  if (switch_enclave(regs, from_eid, to_eid) != SBI_ERR_SM_ENCLAVE_SUCCESS) {
+    return -1;
+  }
+
+  record_enclave_time(to, true);
+  regs->mepc += 4;
   sbi_trap_exit(regs);
   return 0;
 }
@@ -58,7 +75,7 @@ unsigned long sbi_sm_resume_enclave(struct sbi_trap_regs *regs, unsigned long ei
 unsigned long sbi_sm_exit_enclave(struct sbi_trap_regs *regs, unsigned long retval)
 { 
   unsigned int eid = cpu_get_enclave_id();
-  record_enclave_time(eid, false);
+  // record_enclave_time(eid, false);
   regs->a0 = exit_enclave(regs, eid);
   regs->a1 = retval;
   regs->mepc += 4;
@@ -69,11 +86,9 @@ unsigned long sbi_sm_exit_enclave(struct sbi_trap_regs *regs, unsigned long retv
 unsigned long sbi_sm_stop_enclave(struct sbi_trap_regs *regs, unsigned long request)
 {
   unsigned int eid = cpu_get_enclave_id();
-  record_enclave_time(eid, false);
+  // record_enclave_time(eid, false);
   regs->a0 = stop_enclave(regs, request, eid);
   regs->mepc += 4;
-  update_ptime_interrupt(eid);
-  update_timer_normal();
   sbi_trap_exit(regs);
   return 0;
 }

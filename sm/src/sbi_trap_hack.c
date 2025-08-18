@@ -11,6 +11,7 @@
 #include <sbi/sbi_timer.h>
 #include <sbi/sbi_trap.h>
 #include "cpu.h"
+#include <sbi_utils/timer/aclint_mtimer.h>
 
 static void sbi_trap_error(const char *msg, int rc,
 				      ulong mcause, ulong mtval, ulong mtval2,
@@ -101,14 +102,26 @@ void sbi_trap_handler_keystone_enclave(struct sbi_trap_regs *regs)
 		switch (mcause) {
 		case IRQ_M_TIMER: {
 			csr_clear(CSR_MIE, MIP_MTIP);
-			record_enclave_time(eid, FALSE);
+			sbi_printf("[%lu] MTI from enclave %d\n", read_mtime(), eid);
+			record_enclave_time(eid, false);
 			next_eid = update_timer(eid);
 			if (next_eid == eid) {
 				// Switch to the next enclave
-				// sbi_printf("[update_ptime_interrupt] back to enclave: %d\n", eid);
-				record_enclave_time(eid, TRUE);
+				sbi_printf("\tback to enclave: %d\n", eid);
+				record_enclave_time(eid, true);
 				return;
 			}
+			if (next_eid >= 0) {
+				sbi_printf("\tswitch to enclave: %d\n", next_eid);
+				// set_next_interrupt_encl_id(next_eid);
+				// update_ptime_interrupt(next_eid);
+				regs->mepc -= 4;
+				if (sbi_sm_switch_enclave(regs, eid, next_eid) != SBI_ERR_SM_ENCLAVE_SUCCESS) {
+					sbi_printf("\tFailed to switch enclave: %d\n", next_eid);
+				}
+				return;
+			}
+			sbi_printf("\tNo urgent enclave to switch to, back to os\n");
       regs->mepc -= 4;
       sbi_sm_stop_enclave(regs, STOP_TIMER_INTERRUPT);
       regs->a0 = SBI_ERR_SM_ENCLAVE_INTERRUPTED;

@@ -152,6 +152,7 @@ void update_ptime_interrupt(enclave_id eid);
 int get_urgent_enclave_id(void);
 int enclave_is_in_edge_call(enclave_id eid);
 void enclave_clear_edge_call(enclave_id eid);
-enclave_id update_timer(enclave_id eid);
+int update_timer(enclave_id eid);
 void update_timer_normal(void);
+void set_mtimer(uint64_t next_interrupt);
 #endif

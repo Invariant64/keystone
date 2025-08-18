@@ -13,6 +13,7 @@
 #include "sm-sbi.h"
 #include "sm.h"
 #include "cpu.h"
+#include <sbi_utils/timer/aclint_mtimer.h>
 
 static int sbi_ecall_keystone_enclave_handler(unsigned long extid, unsigned long funcid,
                      const struct sbi_trap_regs *regs,
@@ -20,6 +21,9 @@ static int sbi_ecall_keystone_enclave_handler(unsigned long extid, unsigned long
                      struct sbi_trap_info *out_trap)
 {
   uintptr_t retval;
+
+  enclave_id eid = cpu_get_enclave_id();
+  int next_eid = -1;
 
   if (funcid <= FID_RANGE_DEPRECATED) { return SBI_ERR_SM_DEPRECATED; }
   else if (funcid <= FID_RANGE_HOST)
@@ -42,6 +46,7 @@ static int sbi_ecall_keystone_enclave_handler(unsigned long extid, unsigned long
       break;
     case SBI_SM_RUN_ENCLAVE:
       enclave_clear_edge_call(regs->a0);
+      sbi_printf("[%lu] RUN ECALL\n", read_mtime());
       retval = sbi_sm_run_enclave((struct sbi_trap_regs*) regs, regs->a0);
       __builtin_unreachable();
       break;
@@ -63,7 +68,37 @@ static int sbi_ecall_keystone_enclave_handler(unsigned long extid, unsigned long
       retval = sbi_sm_get_sealing_key(regs->a0, regs->a1, regs->a2);
       break;
     case SBI_SM_STOP_ENCLAVE:
-      retval = sbi_sm_stop_enclave((struct sbi_trap_regs*) regs, regs->a0);
+      sbi_printf("[%lu] STOP ECALL\n", read_mtime());
+      record_enclave_time(eid, false);
+      next_eid = update_timer(eid);
+      // if (next_eid < 0) {
+      //   sbi_printf("\tNo urgent enclave to switch to\n");
+      //   retval = sbi_sm_stop_enclave((struct sbi_trap_regs*) regs, regs->a0);
+      // } else {
+      //   sbi_printf("\tResuming to enclave: %d\n", next_eid);
+      //   if (next_eid == eid) {
+      //     retval = 0;
+      //     break; // If the next enclave is the same, just continue
+      //   }
+      //   retval = sbi_sm_resume_enclave((struct sbi_trap_regs*) regs, next_eid);
+      // }
+			if (next_eid == eid) {
+				// Switch to the next enclave
+				sbi_printf("\tback to enclave: %d\n", eid);
+				record_enclave_time(eid, true);
+        // ((struct sbi_trap_regs*) regs)->mepc += 4;
+				return 0;
+			}
+			if (next_eid >= 0) {
+				sbi_printf("\tswitch to enclave: %d\n", next_eid);
+        ((struct sbi_trap_regs*) regs)->mepc -= 4;
+				if (sbi_sm_switch_enclave((struct sbi_trap_regs*) regs, eid, next_eid) != SBI_ERR_SM_ENCLAVE_SUCCESS) {
+					sbi_printf("\tFailed to switch enclave: %d\n", next_eid);
+				}
+				return 0;
+			}
+			sbi_printf("\tNo urgent enclave to switch to, back to os\n");
+      retval = sbi_sm_stop_enclave((struct sbi_trap_regs*) regs, STOP_TIMER_INTERRUPT);
       __builtin_unreachable();
       break;
     case SBI_SM_EXIT_ENCLAVE:

@@ -20,6 +20,7 @@ void init_timer(void)
 
 void handle_timer_interrupt()
 {
+  printf("[%lu] STI\n", get_cycles64());
   sbi_stop_enclave(0);
   unsigned long next_cycle = get_cycles64() + DEFAULT_CLOCK_DELAY;
   sbi_set_timer(next_cycle);
@@ -39,6 +40,7 @@ void handle_interrupts(struct encl_ctx* regs)
     case INTERRUPT_CAUSE_SOFTWARE:
     case INTERRUPT_CAUSE_EXTERNAL:
     default:
+      printf("[runtime] Unhandled interrupt: %lu\n", cause);
       sbi_stop_enclave(0);
       return;
   }

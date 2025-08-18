@@ -41,4 +41,7 @@ sbi_sm_call_plugin(uintptr_t plugin_id, uintptr_t call_id, uintptr_t arg0, uintp
 unsigned long
 sbi_sm_attest_sm(uintptr_t args);
 
+unsigned long
+sbi_sm_switch_enclave(struct sbi_trap_regs *regs, unsigned long from, unsigned long to);
+
 #endif

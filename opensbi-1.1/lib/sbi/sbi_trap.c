@@ -21,6 +21,7 @@
 #include <sbi/sbi_scratch.h>
 #include <sbi/sbi_timer.h>
 #include <sbi/sbi_trap.h>
+#include <sbi_utils/timer/aclint_mtimer.h>
 
 static void __noreturn sbi_trap_error(const char *msg, int rc,
 				      ulong mcause, ulong mtval, ulong mtval2,
@@ -196,25 +197,33 @@ int sbi_trap_redirect(struct sbi_trap_regs *regs,
 extern unsigned long sbi_sm_resume_enclave(struct sbi_trap_regs *regs, int eid);
 extern int get_next_interrupt_encl_id(void);
 extern int enclave_is_in_edge_call(int eid);
+extern int update_timer(unsigned int eid);
 
 static int sbi_trap_nonaia_irq(struct sbi_trap_regs *regs, ulong mcause)
 {
 	int eid = get_next_interrupt_encl_id();
+	int next_eid;
 
 	mcause &= ~(1UL << (__riscv_xlen - 1));
 	switch (mcause) {
 	case IRQ_M_TIMER:
 		sbi_timer_process();
-		// sbi_printf("sbi_trap_nonaia_irq: M_TIMER\n");
+		sbi_printf("[%lu]: MTI from os, eid: %d\n", read_mtime(), eid);
 		if (eid != -1) {
-			// sbi_printf("[update_ptime_interrupt] resume enclave: %d from os\n", eid);
+			next_eid = update_timer(eid);
+			if (next_eid < 0)
+				next_eid = eid;
+			sbi_printf("\tresume enclave: %d from os\n", next_eid);
 			// if (enclave_is_in_edge_call(eid)) {
 			// 	sbi_printf("Enclave %u is in edge call, cannot resume from timer interrupt\n", eid);
 			// 	break;
 			// }
 			regs->mepc -= 4;
-			sbi_sm_resume_enclave(regs, eid);
+			sbi_sm_resume_enclave(regs, next_eid);
 			regs->mepc += 4;
+		}
+		else {
+			sbi_printf("\tNo enclave to resume from timer interrupt\n");
 		}
 		break;
 	case IRQ_M_SOFT:

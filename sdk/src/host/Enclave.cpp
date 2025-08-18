@@ -268,11 +268,12 @@ Enclave::run(uintptr_t* retval) {
     if (ret == Error::EdgeCallHost && oFuncDispatch != NULL) {
       oFuncDispatch(getSharedBuffer());
     }
+    printf("[SDK] Retrying run after edge call or interrupt...\n");
     ret = pDevice->resume(retval);
   }
 
   if (ret != Error::Success) {
-    ERROR("failed to run enclave - ioctl() failed");
+    ERROR("failed to run enclave - ioctl() failed, returned %d", ret);
     destroy();
     return Error::DeviceError;
   }
